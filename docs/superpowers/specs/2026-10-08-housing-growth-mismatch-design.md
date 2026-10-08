@@ -1,7 +1,7 @@
 # Design: US Housing Constraints and the Growth Mismatch of American Cities
 
 - **Date:** 2026-10-08
-- **Status:** Draft — awaiting user review
+- **Status:** Approved 2026-10-08
 - **Purpose:** Portfolio project and academic research. Deliverables are a reproducible repo, analysis notebooks, a Markdown paper, and a static interactive dashboard.
 
 ## 1. Intent
@@ -158,14 +158,14 @@ us_housing_crisis_analysis/
 
 ### Dependencies
 
-pandas, pyarrow, requests, python-dotenv, typer, loguru, tqdm, statsmodels, linearmodels, ruptures, matplotlib, plotly, jupyter, nbconvert, pytest. External tool: Quarto, for rendering the paper. `pyproject.toml` `requires-python` changes to `>=3.12` to match the venv.
+pandas, pyarrow, requests, python-dotenv, typer, loguru, tqdm, statsmodels, linearmodels, ipumspy, openpyxl, matplotlib, plotly, jupyter, jupytext, nbconvert, pytest. The break search is implemented directly with statsmodels, so `ruptures` is not needed. External tool: Quarto, for rendering the paper. `pyproject.toml` `requires-python` changes to `>=3.12` to match the venv.
 
 ## 5. Methods
 
 Full write-ups are kept in `Claude/methods/analysis-methods.md`.
 
 - **RQ0a — city vs. metro decomposition.** Track the central city's share of metro population by decade and split metro growth into core and suburban parts. Classify each metro as: suburbanizing (core declined, metro grew), stagnant (both stagnated), growing (both grew), or core-recovery.
-- **RQ0b — US structural break.** For each decade d: Δln(pop)_i,d = α_d + β_d · ln(income per capita)_i,d−1 + ε, where i is a state or a metro. Each version starts at the first decade from which income exists for every decade onward, with no interpolated gaps: **states 1880–2020**, **metros 1940–2020**. Plot β_d for both versions. The break tests run on the pooled unit × decade panel, with income interacted with period indicators, because a series of 7–14 β_d values is too short for them: Chow tests at 1950 and 1980, and a Bai-Perron multiple-break search. Each change of income source (e.g., Klein → Easterlin → BEA) gets an indicator, and results are reported with and without the decades where the source changes.
+- **RQ0b — US structural break.** For each decade d: Δln(pop)_i,d = α_d + β_d · ln(income per capita)_i,d−1 + ε, where i is a state or a metro. Each version starts at the first decade from which income exists for every decade onward, with no interpolated gaps: **states 1880–2020**, **metros 1940–2020**. Plot β_d for both versions. The break tests run on the pooled unit × decade panel, with income interacted with period indicators, because a series of 7–14 β_d values is too short for them: Chow tests at 1950 and 1980 (Wald tests with standard errors clustered by unit), and a Bai-Perron-style global search over decade boundaries, with the number of breaks chosen by BIC. Changes of income source (e.g., Klein → Easterlin → BEA) happen between decades, so the decade fixed effects already absorb any level shift they cause; a separate source indicator would be collinear with them. Two robustness checks cover the rest: income standardized within each decade (for sources with different spreads), and results without the decades where the source changes.
 - **RQ0c — global timing.** Five-year agglomeration population growth regressed on national GDP per capita growth and urbanization rate, estimated by peer group with decade interactions.
 - **RQ1 — OECD elasticity.** Δ5 ln(pop)_it = β Δ5 ln(GDP)_it + γ (Δ5 ln(GDP)_it × US_i) + metro FE + year FE, with standard errors clustered by country. A robustness check replaces GDP with GDP per worker. Reported as an association because of reverse causality.
 - **RQ2 — US mismatch.** Metro residuals from an RQ1-style model regressed on permits per capita and the Wharton index.
@@ -213,7 +213,7 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 
 **Crosswalks and geography:**
 - each county maps to at most one CBSA;
-- CBSA 2020 populations built from the crosswalk match official Census 2020 CBSA totals within 0.1% (data);
+- CBSA 2020 populations built from the crosswalk match the Census Bureau's 2020 estimates base for each CBSA within 1% (data; the estimates base differs slightly from the census count, and Connecticut is excluded because its 2023 CBSAs use planning regions), and county membership matches the Census Bureau's own CBSA file exactly;
 - explicit cases for known boundary changes: Connecticut's 2022 shift from 8 counties to 9 planning regions, Virginia independent city mergers (e.g., Bedford, Clifton Forge), Broomfield CO (2001), Alaska boroughs, Miami-Dade FIPS change;
 - featured cities resolve to the IDs in the committed crosswalk; no OECD metro matches more than one UN WUP agglomeration.
 
@@ -223,16 +223,17 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 
 **Estimator recovery on synthetic data (fast):**
 - `elasticity.py`: on a simulated panel with β = 0.5 and US interaction −0.3, the estimates fall within tolerance and the clustered standard errors are finite;
-- `breaks.py`: on a simulated pooled panel, the Chow test and Bai-Perron detect breaks planted at 1950 or 1980 and detect none in a panel without one; a level jump planted at an income-source change is absorbed by the source indicator rather than reported as a break;
+- `breaks.py`: on a simulated pooled panel, the Chow test and Bai-Perron detect breaks planted at 1950 or 1980 and detect none in a panel without one; a level jump planted at an income-source change is absorbed by the decade fixed effects rather than reported as a break;
 - `event_study.py`: the DiD recovers a simulated +20% post-2016 effect, the pre-period coefficients are about 0, and a 2012 placebo shows no effect.
 
-**Plausibility bounds (data):** no negative populations; no metro whose population changes by more than ±80% in one decade unless it is on a committed allowlist; permits per capita within a sane range.
+**Plausibility bounds (data):** no negative populations; no metro whose population falls by more than half or more than triples in one decade unless it is on a committed allowlist (the looser bound leaves room for genuine Sun Belt booms); permits per capita within a sane range.
 
 **Known-value checks (data)**, so a broken download fails loudly, with values recorded in `references/known_values.csv`:
 - Detroit city 1950 population = 1,849,568;
 - US 2020 census resident population = 331,449,281;
 - US 1880 census population = 50,189,209;
-- one state value each from the Klein and Easterlin tables, and one 1940 IPUMS county wage income value;
+- hand-collected state income: Klein's and Easterlin's independent 1880 and 1900 estimates agree closely (correlation and median gap), as a check on transcription;
+- 1940 IPUMS wage income per capita, aggregated to states, correlates strongly with BEA 1940 state income per capita;
 - two or three CBSA 2020 Census counts (e.g., San Francisco–Oakland), one year of BEA personal income, one OECD metro, and one UN WUP agglomeration.
 
 **Not tested:** live network calls (one mocked test checks that `download()` skips existing files unless `force=True`); plotting internals. The dashboard gets a smoke test: the HTML is built, is self-contained, and contains the four expected charts.

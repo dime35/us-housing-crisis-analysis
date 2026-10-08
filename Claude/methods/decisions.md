@@ -135,8 +135,20 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Why:** The 1950 Chow test needs data before 1950. The user rejected dropping or interpolating gap decades in favor of starting where the series is complete. Klein (2013) fills Easterlin's 1890 and 1910 gaps, so the state version can start in 1880.
 - **Decided by:** user (start-year rule); Claude (pooled testing, source indicators, Klein as the gap filler)
 
+### D-20 · Spec approved; corrections made while planning
+- **Decision:**
+  - The user approved the spec, including the D-17 defaults.
+  - Corrections made while writing the first plan:
+    - RQ0b source indicators dropped. They are collinear with the decade fixed effects, which already absorb source-level shifts. Within-decade standardized income was added as a robustness check.
+    - Bai-Perron is implemented as a global SSR search over decade boundaries with BIC selection. `ruptures` was dropped; `ipumspy`, `openpyxl` and `jupytext` were added.
+    - The CBSA check uses a 1% tolerance against the Census Bureau's 2020 estimates base, excluding Connecticut.
+    - The plausibility bound is "falls by half or triples", not ±80%, which would flag genuine Sun Belt growth.
+    - Known-value checks on hand-collected and IPUMS data were replaced with independent cross-checks (Klein vs. Easterlin; IPUMS 1940 vs. BEA 1940).
+  - Implementation is split into one plan per build stage. Plan 1 covers scaffolding and RQ0b; RQ0a (city-proper) is Plan 2.
+- **Decided by:** user (approval); Claude (corrections, plan split)
+
 ## Open items
-- Spec review and approval → then write the implementation plan (writing-plans).
+- Execute Plan 1 (`docs/superpowers/plans/2026-10-08-plan-1-scaffolding-and-rq0b.md`); then write Plan 2 (RQ0a, city-proper).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.
