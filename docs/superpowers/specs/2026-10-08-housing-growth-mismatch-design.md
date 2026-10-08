@@ -199,15 +199,43 @@ Notebooks save figures to `reports/figures/` and tables to `reports/tables/`.
 
 ## 7. Testing and validation
 
-- **Unit tests (pytest):**
-  - every source's `load()` output conforms to the long-format schema;
-  - the county→CBSA crosswalk maps each county to at most one metro, and county totals sum to metro totals;
-  - panels have unique (`geo_id`, `year`) pairs and years within the expected range.
-- **Known-value checks**, which run as tests on cached data so a broken download fails loudly:
-  - Detroit city 1950 population = 1,849,568;
-  - US 2020 census resident population = 331,449,281;
-  - spot checks on one OECD metro and one UN WUP agglomeration, values recorded in `references/known_values.csv`.
-- **Notebook execution:** `make notebooks` must complete without errors.
+Tests focus on data correctness and estimator correctness, not code coverage. Each test is written in the build step that introduces the code it covers (§10).
+
+**Two tiers:**
+- **Fast tests** run on small raw-file samples committed in `tests/fixtures/`. They need no network or API keys and run on every commit.
+- **Data tests** (`@pytest.mark.data`) run on cached data in `data/` and are skipped when it is absent.
+
+**Schema and panels (fast):**
+- every source's `load()` output conforms to the long-format schema: column types, no nulls in key columns, `geo_id` prefix consistent with `geo_level`, unique (`geo_id`, `year`, `variable`), one `unit` per `variable`;
+- panels have unique (`geo_id`, `year`) pairs and years within the expected range.
+
+**Crosswalks and geography:**
+- each county maps to at most one CBSA;
+- CBSA 2020 populations built from the crosswalk match official Census 2020 CBSA totals within 0.1% (data);
+- explicit cases for known boundary changes: Connecticut's 2022 shift from 8 counties to 9 planning regions, Virginia independent city mergers (e.g., Bedford, Clifton Forge), Broomfield CO (2001), Alaska boroughs, Miami-Dade FIPS change;
+- featured cities resolve to the IDs in the committed crosswalk; no OECD metro matches more than one UN WUP agglomeration.
+
+**Units and classifications (fast):**
+- deflation, PPP conversion, and index rebasing (2015 = 100) match hand-checked values;
+- every country in a panel gets exactly one peer group, with spot checks (Korea → high-income newly developed, Poland → transition, Vietnam → developing).
+
+**Estimator recovery on synthetic data (fast):**
+- `elasticity.py`: on a simulated panel with β = 0.5 and US interaction −0.3, the estimates fall within tolerance and the clustered standard errors are finite;
+- `breaks.py`: Bai-Perron detects a break planted at 1980 and detects none in a series without one;
+- `event_study.py`: the DiD recovers a simulated +20% post-2016 effect, the pre-period coefficients are about 0, and a 2012 placebo shows no effect.
+
+**Plausibility bounds (data):** no negative populations; no metro whose population changes by more than ±80% in one decade unless it is on a committed allowlist; permits per capita within a sane range.
+
+**Known-value checks (data)**, so a broken download fails loudly, with values recorded in `references/known_values.csv`:
+- Detroit city 1950 population = 1,849,568;
+- US 2020 census resident population = 331,449,281;
+- two or three CBSA 2020 Census counts (e.g., San Francisco–Oakland), one year of BEA personal income, one OECD metro, and one UN WUP agglomeration.
+
+**Not tested:** live network calls (one mocked test checks that `download()` skips existing files unless `force=True`); plotting internals. The dashboard gets a smoke test: the HTML is built, is self-contained, and contains the four expected charts.
+
+**Notebook execution:** `make notebooks` must complete without errors. Logic worth testing moves from notebooks into the package.
+
+**Sanity check (notebook, not pytest):** the RQ0b notebook roughly reproduces Ganong & Shoag's (2017) decline in income convergence before the project's own findings are trusted.
 
 ## 8. Risks and mitigations
 
