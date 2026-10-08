@@ -62,6 +62,7 @@
 ## Documentation
 - Maintain `Claude/research/sources.md`: a list of every data source and reference used (URL, coverage, access date, license, and which module uses it). Update it whenever a source is added or changed.
 - Maintain `Claude/methods/`: markdown explanations of the pipeline, analysis methods, and architecture. Update the relevant file in the same change as any pipeline, model, or architecture change.
+- Maintain `Claude/methods/decisions.md`: append a numbered entry (decision, alternatives, rationale, who decided) for every project decision. Mark reversed decisions as superseded instead of deleting them.
 
 ## Git Workflow
 - Make a git commit after every completed step (each plan task, spec, or doc update), with a descriptive message.
