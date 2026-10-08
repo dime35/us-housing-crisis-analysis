@@ -123,6 +123,18 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - US metros use the 2023 CBSA delineation as the constant boundary.
 - **Decided by:** default
 
+### D-18 · Testing plan (spec Section 7)
+- **Decision:** Fast tests on committed fixtures plus `@pytest.mark.data` tests on cached data; estimator-recovery tests on synthetic data; CBSA totals checked against official Census totals; explicit tests for county boundary changes. No tests of live downloads or plotting internals.
+- **Decided by:** user
+
+### D-19 · RQ0b extended before 1950
+- **Decision:**
+  - Each RQ0b version starts at the first decade from which income exists for every decade onward, with no interpolation: states 1880–2020 (Klein 1880–1910, Easterlin 1920, BEA 1930+); metros 1940–2020 (1940 IPUMS full-count wage income, then Census and BEA).
+  - The manufacturing-wage proxy for pre-1940 metros was considered and dropped.
+  - Chow and Bai-Perron tests run on the pooled unit × decade panel, not on the β_d series; each income source gets an indicator.
+- **Why:** The 1950 Chow test needs data before 1950. The user rejected dropping or interpolating gap decades in favor of starting where the series is complete. Klein (2013) fills Easterlin's 1890 and 1910 gaps, so the state version can start in 1880.
+- **Decided by:** user (start-year rule); Claude (pooled testing, source indicators, Klein as the gap filler)
+
 ## Open items
 - Spec review and approval → then write the implementation plan (writing-plans).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.

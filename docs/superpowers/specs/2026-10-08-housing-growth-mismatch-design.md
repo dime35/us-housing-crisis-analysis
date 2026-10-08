@@ -20,7 +20,7 @@ Many US cities grew rapidly before 1950 and have plateaued since. This project a
 | ID | Question | Hypothesis | Tier / years |
 |---|---|---|---|
 | RQ0a | How much of the post-1950 plateau in US cities is suburbanization (city vs. metro) versus real metro stagnation? | City-proper plateaus are largely boundary artifacts; metro slowdown is later and uneven | Tier 0, 1900–2020 |
-| RQ0b | Is there a structural break in how US metro population growth responds to income, and when? | The relationship weakens after ~1980, not 1950 (cf. Ganong & Shoag 2017) | Tier 0, 1950–2020 |
+| RQ0b | Is there a structural break in how US population growth responds to income, and when? | The relationship holds through 1950 and weakens after ~1980 (cf. Ganong & Shoag 2017) | Tier 0: states 1880–2020; metros 1940–2020 |
 | RQ0c | Do non-US agglomerations show the same timing? | Peer cities show no comparable break, or a different one | Tier 0 global, 1950–2020 |
 | RQ1 | For the same GDP growth, do US metros add fewer people than OECD peers? | The population-to-GDP growth elasticity is lower in the US | Tier 1, ~2000–2022 |
 | RQ2 | Within the US, are the metros with the largest mismatch the ones that build least? | High-GDP-growth, low-permit metros show the largest gap | Tier 2, US metros |
@@ -36,7 +36,7 @@ Many US cities grew rapidly before 1950 and have plateaued since. This project a
 
 | Tier | Coverage | Geography | Key variables |
 |---|---|---|---|
-| 0 — Long-run US | 1900–2020, decennial | All US metros (constant 2023 CBSA boundaries, built from counties); city-proper for major cities | Population, housing units (1940+), median family income (1950+), personal income (1969+) |
+| 0 — Long-run US | 1880–2020, decennial | States (1880+); all US metros (constant 2023 CBSA boundaries, built from counties, 1900+); city-proper for major cities | Population, housing units (1940+). Income per capita, every decade with no gaps: **states** from Klein (1880–1910), Easterlin (1920), BEA (1929+); **metros** from 1940 full-count census wage income (IPUMS), median family income (1950–60), BEA personal income (1969+) |
 | 0 — Long-run global | 1950–2020, 5-year | ~1,900 UN WUP agglomerations (300k+) | Population, national GDP per capita, national urbanization rate |
 | 1 — OECD metro panel | ~2000–2022, annual | ~600 OECD metros plus Eurostat metro regions for non-OECD EU members | Population, GDP |
 | 2 — Housing | US: all metros, 2000+. International: national-level | US metros; OECD countries | Housing stock, permits/completions, house prices, price-to-income, Wharton index (US) |
@@ -81,7 +81,8 @@ us_housing_crisis_analysis/
 ├── config.py          # paths, year ranges, featured cities, peer-group rules
 ├── sources/           # one module per source; each exposes download() and load()
 │   ├── census_decennial.py   # city-proper population 1790–2020
-│   ├── nhgis.py              # county population (1900+), housing units (1940+), median family income (1950+)
+│   ├── nhgis.py              # state population (1880+), county population (1900+), housing units (1940+), median family income (1950+)
+│   ├── ipums.py              # 1940 full-count census wage income, aggregated to counties
 │   ├── census_pep.py         # annual metro/county population estimates
 │   ├── bea.py                # metro GDP 2001+, county personal income 1969+, state income 1929+
 │   ├── census_bps.py         # building permits by metro
@@ -93,7 +94,7 @@ us_housing_crisis_analysis/
 │   ├── worldbank.py          # national GDP per capita, income groups
 │   ├── maddison.py           # long-run national GDP
 │   ├── statsnz.py            # building consents by region (RQ5)
-│   └── manual.py             # loads hand-collected files
+│   └── manual.py             # loads hand-collected files, incl. Klein and Easterlin state income tables
 ├── geography.py       # crosswalks: county→CBSA, CBSA↔OECD metro, UN WUP↔OECD metro, featured-city IDs
 ├── dataset.py         # Typer CLI: download / load all sources → data/interim
 ├── features.py        # builds the analysis panels → data/processed
@@ -130,7 +131,8 @@ us_housing_crisis_analysis/
 
 | Panel | Grain | Feeds |
 |---|---|---|
-| `us_metro_longrun` | metro × decade, 1900–2020, plus city-proper for major cities | RQ0a, RQ0b, RQ3 (long run) |
+| `us_state_longrun` | state × decade, 1880–2020 | RQ0b (state version) |
+| `us_metro_longrun` | metro × decade, 1900–2020, plus city-proper for major cities | RQ0a, RQ0b (metro version), RQ3 (long run) |
 | `us_metro_annual` | metro × year, 2000+ | RQ2, RQ4 |
 | `oecd_metro_panel` | metro × year, ~2000–2022 | RQ1, RQ2 |
 | `global_agglomerations` | agglomeration × 5-year step, 1950–2020, with peer group | RQ0c |
@@ -163,7 +165,7 @@ pandas, pyarrow, requests, python-dotenv, typer, loguru, tqdm, statsmodels, line
 Full write-ups are kept in `Claude/methods/analysis-methods.md`.
 
 - **RQ0a — city vs. metro decomposition.** Track the central city's share of metro population by decade and split metro growth into core and suburban parts. Classify each metro as: suburbanizing (core declined, metro grew), stagnant (both stagnated), growing (both grew), or core-recovery.
-- **RQ0b — US structural break.** For each decade d: Δln(pop)_m,d = α_d + β_d · ln(income per capita)_m,d−1 + ε. Plot β_d over 1950–2020. Run a Bai-Perron multiple-break test on the β_d series and Chow tests at 1950 and 1980. Income comes from Census median family income (1950–1960) and BEA personal income per capita (1970+); results are reported with and without 1950–60.
+- **RQ0b — US structural break.** For each decade d: Δln(pop)_i,d = α_d + β_d · ln(income per capita)_i,d−1 + ε, where i is a state or a metro. Each version starts at the first decade from which income exists for every decade onward, with no interpolated gaps: **states 1880–2020**, **metros 1940–2020**. Plot β_d for both versions. The break tests run on the pooled unit × decade panel, with income interacted with period indicators, because a series of 7–14 β_d values is too short for them: Chow tests at 1950 and 1980, and a Bai-Perron multiple-break search. Each change of income source (e.g., Klein → Easterlin → BEA) gets an indicator, and results are reported with and without the decades where the source changes.
 - **RQ0c — global timing.** Five-year agglomeration population growth regressed on national GDP per capita growth and urbanization rate, estimated by peer group with decade interactions.
 - **RQ1 — OECD elasticity.** Δ5 ln(pop)_it = β Δ5 ln(GDP)_it + γ (Δ5 ln(GDP)_it × US_i) + metro FE + year FE, with standard errors clustered by country. A robustness check replaces GDP with GDP per worker. Reported as an association because of reverse causality.
 - **RQ2 — US mismatch.** Metro residuals from an RQ1-style model regressed on permits per capita and the Wharton index.
@@ -221,7 +223,7 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 
 **Estimator recovery on synthetic data (fast):**
 - `elasticity.py`: on a simulated panel with β = 0.5 and US interaction −0.3, the estimates fall within tolerance and the clustered standard errors are finite;
-- `breaks.py`: Bai-Perron detects a break planted at 1980 and detects none in a series without one;
+- `breaks.py`: on a simulated pooled panel, the Chow test and Bai-Perron detect breaks planted at 1950 or 1980 and detect none in a panel without one; a level jump planted at an income-source change is absorbed by the source indicator rather than reported as a break;
 - `event_study.py`: the DiD recovers a simulated +20% post-2016 effect, the pre-period coefficients are about 0, and a 2012 placebo shows no effect.
 
 **Plausibility bounds (data):** no negative populations; no metro whose population changes by more than ±80% in one decade unless it is on a committed allowlist; permits per capita within a sane range.
@@ -229,6 +231,8 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 **Known-value checks (data)**, so a broken download fails loudly, with values recorded in `references/known_values.csv`:
 - Detroit city 1950 population = 1,849,568;
 - US 2020 census resident population = 331,449,281;
+- US 1880 census population = 50,189,209;
+- one state value each from the Klein and Easterlin tables, and one 1940 IPUMS county wage income value;
 - two or three CBSA 2020 Census counts (e.g., San Francisco–Oakland), one year of BEA personal income, one OECD metro, and one UN WUP agglomeration.
 
 **Not tested:** live network calls (one mocked test checks that `download()` skips existing files unless `force=True`); plotting internals. The dashboard gets a smoke test: the HTML is built, is self-contained, and contains the four expected charts.
@@ -242,7 +246,9 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 | Risk | Mitigation |
 |---|---|
 | Metro boundaries change over time | Constant 2023 CBSA boundaries built from counties for all years; county boundary changes handled via NHGIS standardized or time-consistent tables where available, and documented |
-| Historical income data is coarse | Report results with and without 1950–60 |
+| Historical income data is coarse | Each RQ0b version starts at the first decade with income for every decade onward (states 1880, metros 1940); no interpolation |
+| Changes of income source can look like structural breaks | Source indicators; results with and without the decades where the source changes |
+| 1940 census wage income is top-coded at $5,000 and excludes business and farm income | Documented as a limitation; metro results checked against the state version, which uses full personal income |
 | UN WUP ↔ OECD metro matching | Automatic match by name and coordinate distance; manual review for featured cities; committed table in `references/crosswalks/` |
 | Source APIs change or disappear | Raw files cached; provenance in `Claude/research/sources.md` |
 | Comparing fast-urbanizing countries with mature ones | Peer groups plus urbanization control; never pool without them |
@@ -257,7 +263,7 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 ## 10. Build order
 
 1. Scaffolding: dependencies, config, long-format schema, test harness
-2. Tier 0 US: NHGIS, Census decennial, BEA income, crosswalks → `us_metro_longrun` → RQ0a and RQ0b notebooks
+2. Tier 0 US: NHGIS, Census decennial, IPUMS 1940 full count, BEA income, Klein and Easterlin state income (hand-collected), crosswalks → `us_state_longrun` and `us_metro_longrun` → RQ0a and RQ0b notebooks
 3. Tier 0 global: UN WUP, World Bank, Maddison → `global_agglomerations` → RQ0c
 4. Tier 1: OECD and Eurostat metros → `oecd_metro_panel` → RQ1
 5. Tier 2: BPS, FHFA, Wharton, Census population estimates, OECD housing → `us_metro_annual` and `national_housing` → RQ2 to RQ4
