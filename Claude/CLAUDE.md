@@ -54,6 +54,12 @@
     └── plots.py                <- Code to create visualizations 
 ```  
 ## Development Commands
+- Use `venv/bin/python` (the project venv is `venv/`, not `.venv`).
+- `make test` — all tests (data tests skip when `data/` is not built)
+- `make test-fast` — only tests that need no downloaded data
+- `make data` — download and load every source into `data/interim/`
+- `make features` — build the analysis panels into `data/processed/`
+- `make notebooks` — execute all notebooks in order
 
 
 ## Coding Rules & Conventions

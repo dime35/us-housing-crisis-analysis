@@ -3,8 +3,8 @@
 #################################################################################
 
 PROJECT_NAME = us_housing_crisis_analysis
-PYTHON_VERSION = 3.10
-PYTHON_INTERPRETER = python
+PYTHON_VERSION = 3.12
+PYTHON_INTERPRETER = venv/bin/python
 
 #################################################################################
 # COMMANDS                                                                      #
@@ -15,7 +15,7 @@ PYTHON_INTERPRETER = python
 .PHONY: requirements
 requirements:
 	$(PYTHON_INTERPRETER) -m pip install -U pip
-	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+	$(PYTHON_INTERPRETER) -m pip install -e .
 	
 
 
@@ -30,14 +30,14 @@ clean:
 ## Lint using ruff (use `make format` to do formatting)
 .PHONY: lint
 lint:
-	ruff format --check
-	ruff check
+	$(PYTHON_INTERPRETER) -m ruff format --check
+	$(PYTHON_INTERPRETER) -m ruff check
 
 ## Format source code with ruff
 .PHONY: format
 format:
-	ruff check --fix
-	ruff format
+	$(PYTHON_INTERPRETER) -m ruff check --fix
+	$(PYTHON_INTERPRETER) -m ruff format
 
 
 
@@ -50,10 +50,35 @@ format:
 #################################################################################
 
 
-## Make dataset
+## Download and load every source into data/interim
 .PHONY: data
-data: requirements
-	$(PYTHON_INTERPRETER) us_housing_crisis_analysis/dataset.py
+data:
+	$(PYTHON_INTERPRETER) -m us_housing_crisis_analysis.dataset download
+	$(PYTHON_INTERPRETER) -m us_housing_crisis_analysis.dataset load
+
+## Build analysis panels into data/processed
+.PHONY: features
+features:
+	$(PYTHON_INTERPRETER) -m us_housing_crisis_analysis.features
+
+## Execute all notebooks in order
+.PHONY: notebooks
+notebooks:
+	$(PYTHON_INTERPRETER) -m jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
+
+## Run all tests (data tests skip when data/ is not built)
+.PHONY: test
+test:
+	$(PYTHON_INTERPRETER) -m pytest
+
+## Run only tests that need no downloaded data
+.PHONY: test-fast
+test-fast:
+	$(PYTHON_INTERPRETER) -m pytest -m "not data"
+
+## Rebuild everything implemented so far
+.PHONY: all
+all: data features notebooks test
 
 
 #################################################################################

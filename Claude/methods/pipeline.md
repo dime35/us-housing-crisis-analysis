@@ -34,6 +34,8 @@ dashboard.py          →  reports/dashboard/index.html
 
 Every source's `load()` returns these columns: `geo_id, geo_name, geo_level, country_iso3, year, variable, value, unit, source`.
 
+**Schema validation:** `dataset.py load` runs `validate_long()` (`schema.py`) on every source before writing its parquet file.
+
 `geo_id` is prefixed by namespace so IDs never collide: `county:24510`, `cbsa:12580`, `oecd:US019`, `wup:21853`, `iso3:USA`.
 
 ## Processed panels

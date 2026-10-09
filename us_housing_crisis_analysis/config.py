@@ -21,6 +21,22 @@ MODELS_DIR = PROJ_ROOT / "models"
 REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
+REFERENCES_DIR = PROJ_ROOT / "references"
+CROSSWALKS_DIR = REFERENCES_DIR / "crosswalks"
+MANUAL_DATA_DIR = REFERENCES_DIR / "manual_data"
+TABLES_DIR = REPORTS_DIR / "tables"
+
+# Names of the .env variables holding API keys (values are never stored here)
+IPUMS_API_KEY_ENV = "IPUMS_API_KEY"  # one key covers NHGIS and IPUMS USA
+BEA_API_KEY_ENV = "BEA_API_KEY"
+
+# RQ0b: each version starts at the first decade from which income exists for every
+# decade onward (spec §5). No decade is interpolated.
+RQ0B_STATE_START = 1880
+RQ0B_METRO_START = 1940
+RQ0B_END = 2020
+METRO_LONGRUN_START = 1900
+
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135
 try:
