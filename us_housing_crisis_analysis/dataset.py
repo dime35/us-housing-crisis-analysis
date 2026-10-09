@@ -9,7 +9,8 @@ from us_housing_crisis_analysis.config import INTERIM_DATA_DIR
 from us_housing_crisis_analysis.schema import validate_long
 from us_housing_crisis_analysis.sources import SOURCE_NAMES, get_source
 
-app = typer.Typer()
+# Never print local variables in tracebacks: source download() functions hold API keys.
+app = typer.Typer(pretty_exceptions_show_locals=False)
 
 
 def _selected(source: Optional[str]) -> list[str]:

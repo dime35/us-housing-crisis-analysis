@@ -25,3 +25,8 @@ def test_unknown_source_is_rejected(monkeypatch):
     result = CliRunner().invoke(dataset.app, ["download", "--source", "nope"])
     assert result.exit_code != 0
     assert "unknown source" in result.output
+
+
+def test_cli_tracebacks_do_not_print_local_variables():
+    # API keys live in local variables of source download() functions
+    assert dataset.app.pretty_exceptions_show_locals is False

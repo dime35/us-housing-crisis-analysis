@@ -52,3 +52,16 @@ def test_blank_key_counts_as_missing(monkeypatch):
     monkeypatch.setenv("BEA_API_KEY", "   ")
     with pytest.raises(MissingCredentialError):
         require_env("BEA_API_KEY")
+
+
+class ErrorResponse(FakeResponse):
+    def raise_for_status(self):
+        raise _http.requests.HTTPError("403 Client Error for url: https://example.org/api?UserID=SECRET123")
+
+
+def test_http_error_does_not_leak_query_params(tmp_path, monkeypatch):
+    monkeypatch.setattr(_http.requests, "get", lambda *a, **k: ErrorResponse(b""))
+    with pytest.raises(_http.requests.HTTPError) as exc:
+        download_file("https://example.org/api", tmp_path / "x.json", params={"UserID": "SECRET123"})
+    assert "SECRET123" not in str(exc.value)
+    assert exc.value.__cause__ is None and exc.value.__suppress_context__

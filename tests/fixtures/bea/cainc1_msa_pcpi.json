@@ -1,0 +1,5 @@
+{"BEAAPI": {"Request": {}, "Results": {"Statistic": "Per capita personal income", "UnitOfMeasure": "Dollars", "PublicTable": "CAINC1", "Data": [
+  {"Code": "CAINC1-3", "GeoFips": "12580", "GeoName": "Baltimore-Columbia-Towson, MD (Metropolitan Statistical Area)", "TimePeriod": "1970", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "4,301"},
+  {"Code": "CAINC1-3", "GeoFips": "00998", "GeoName": "United States (Metropolitan Portion)", "TimePeriod": "1970", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "4,500"},
+  {"Code": "CAINC1-3", "GeoFips": "12580", "GeoName": "Baltimore-Columbia-Towson, MD (Metropolitan Statistical Area)", "TimePeriod": "1971", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "(D)"}
+]}}}

@@ -34,7 +34,13 @@ def download_file(
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_name(dest.name + ".part")
     with requests.get(url, params=params, headers=HEADERS, stream=True, timeout=timeout) as r:
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            # requests puts the full URL, query string included, in the message; query params can
+            # carry API keys, so re-raise with the bare URL only.
+            status = getattr(e.response, "status_code", "HTTP error")
+            raise requests.HTTPError(f"{status} for {url}", response=e.response) from None
         with open(tmp, "wb") as f:
             for chunk in r.iter_content(chunk_size=1 << 20):
                 f.write(chunk)
