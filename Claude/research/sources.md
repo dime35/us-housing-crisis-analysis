@@ -15,7 +15,7 @@ Living list of every data source and reference used in the project. Update it wh
 | Population of the 100 Largest Cities, 1790–1990 (Gibson, Working Paper No. 27) | US Census Bureau | https://www.census.gov/library/working-papers/1998/demo/POP-twps0027.html | US cities, decennial 1790–1990 | Public domain | `sources/census_decennial.py` | planned | — |
 | Decennial census city populations 2000–2020 | US Census Bureau | https://data.census.gov | US places | Public domain | `sources/census_decennial.py` | planned | — |
 | Population Estimates Program | US Census Bureau | https://www.census.gov/programs-surveys/popest.html | US counties and metros, annual 2000+ | Public domain | `sources/census_pep.py` | planned | — |
-| CBSA delineation files | US Census Bureau / OMB | https://www.census.gov/geographies/reference-files/time-series/demo/metro-micro/delineation-files.html | County → CBSA (2023) | Public domain | `geography.py` | planned | — |
+| CBSA delineation files | US Census Bureau / OMB | https://www.census.gov/geographies/reference-files/time-series/demo/metro-micro/delineation-files.html | County → CBSA (2023) | Public domain | `geography.py` | active | 2026-10-09 |
 | GDP by metro; personal income by county and state | Bureau of Economic Analysis | https://apps.bea.gov/api/ | Metro GDP 2001+; county income 1969+; state income 1929+ | Free API key; public domain | `sources/bea.py` | planned | — |
 | Building Permits Survey | US Census Bureau | https://www.census.gov/construction/bps/ | US metros and places, annual | Public domain | `sources/census_bps.py` | planned | — |
 | House Price Index (metro) | Federal Housing Finance Agency | https://www.fhfa.gov/data/hpi | US metros, 1975+ | Public domain | `sources/fhfa.py` | planned | — |

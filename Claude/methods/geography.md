@@ -22,4 +22,12 @@ City-proper populations (Census decennial counts) are used only for the RQ0a con
 
 ## Manual fixes log
 
-None yet.
+- **`references/crosswalks/ct_legacy_counties.csv`:** Connecticut's 2023 CBSAs are built from 9 planning regions, but historical data uses the 8 old counties. Each old county is assigned to the 2023 CBSA holding most of its population:
+  - Fairfield → Bridgeport-Stamford-Danbury (14860)
+  - Hartford, Middlesex and Tolland → Hartford (25540)
+  - New Haven → New Haven (35300)
+  - New London → Norwich-New London (35980)
+  - Litchfield → Torrington (micropolitan) and Windham → Putnam (micropolitan), so both drop out of metro panels.
+  - This is an approximation. The Waterbury-Shelton CBSA (47930) has no historical series, and Connecticut CBSAs are excluded from the 2020 tolerance check against the Census estimates base.
+- **`references/crosswalks/county_fixes.csv`:** historical county FIPS codes that no longer exist, mapped to their successors (Dade → Miami-Dade 12025 → 12086; Virginia independent-city mergers). `harmonize_county_fips()` applies the mapping, and callers sum afterwards so merged units add up. Fixes are never chained (a successor is never itself an old code).
+- **NHGIS code → FIPS (`fips_from_nhgis_code`):** NHGIS county codes are a 3-digit state code plus a 4-digit county code, each equal to FIPS × 10 when the county has a FIPS code. Codes whose last digit isn't 0 are historical counties with no FIPS code. They return `None` and go to the unmatched-county report.
