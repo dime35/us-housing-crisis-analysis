@@ -1,6 +1,6 @@
-NHGISCODE,GISJOIN,YEAR,STATE,STATEFP,STATENH,COUNTY,COUNTYFP,COUNTYNH,A00AA
-G2405100,G2405100,1950,Maryland,24,240,Baltimore city,510,5100,949708
-G2405100,G2405100,2020,Maryland,24,240,Baltimore city,510,5100,585708
-G5100190,G5100190,2010,Virginia,51,510,Bedford County,19,0190,68676
-G4650015,G4650015,1880,Dakota Territory,,465,Old County,,0015,1234
-G2405100,G2405100,1790,Maryland,24,240,Baltimore city,510,5100,
+GISJOIN,YEAR,STATE,STATEFP,STATENH,COUNTY,COUNTYFP,COUNTYNH,NAME,A00AA
+"G2405100","1950","Maryland","24","240","Baltimore city","510","5100","Baltimore city",949708
+"G2405100","2020","Maryland","24","240","Baltimore city","510","5100","Baltimore city",585708
+"G5100190","2010","Virginia","51","510","Bedford County","019","0190","Bedford",68676
+"G4650015","1880","Dakota Territory","","465","Old County","","0015","Old",1234
+"G2405100","1790","Maryland","24","240","Baltimore city","510","5100","Baltimore city",

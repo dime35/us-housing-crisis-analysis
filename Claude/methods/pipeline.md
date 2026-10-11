@@ -36,6 +36,8 @@ Every source's `load()` returns these columns: `geo_id, geo_name, geo_level, cou
 
 **Schema validation:** `dataset.py load` runs `validate_long()` (`schema.py`) on every source before writing its parquet file.
 
+**NHGIS population (A00):** a "nominally integrated" time series. Counties are linked across years by name and code, not by boundaries. Rows with no FIPS code (historical counties, territories, 1900 "Persons in the Military") get `county:nhgis-<GISJOIN>` or `state:nhgis-<GISJOIN>` IDs, so they stay traceable.
+
 `geo_id` is prefixed by namespace so IDs never collide: `county:24510`, `cbsa:12580`, `oecd:US019`, `wup:21853`, `iso3:USA`.
 
 ## Processed panels
