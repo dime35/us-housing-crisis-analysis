@@ -147,8 +147,21 @@ These were made by Claude while drafting the spec and haven't been explicitly co
   - Implementation is split into one plan per build stage. Plan 1 covers scaffolding and RQ0b; RQ0a (city-proper) is Plan 2.
 - **Decided by:** user (approval); Claude (corrections, plan split)
 
+### D-21 · 1950/1960 county income from ICPSR 2896, not NHGIS
+- **Decision:** RQ0b metro income for 1950 and 1960 comes from ICPSR study 2896 (Haines), using the County Data Book parts for 1952 (1949 income) and 1962 (1959 income). The user downloads the files by hand, and `sources/icpsr.py` reads them. NHGIS table NT39 (1950) is used once as a cross-check. Plan 1 Task 9 was rewritten, and Task 10 reads income from `icpsr`.
+- **Why:** The NHGIS metadata API (checked 2026-10-09) shows a 1950 county median family income table (`1950_cPHA`, NT39), but the 1960 county dataset (`1960_cPop`) has only 15 population tables and no income. Without 1960 income, the start-year rule would push the metro version's start from 1940 to 1970. ICPSR 2896 covers both years from one consistent Census series.
+- **Alternatives:** the 1960 Census supplementary report ranking county incomes (a PDF to transcribe); starting the metro version in 1970.
+- **Decided by:** user (2026-10-11); source proposed by Claude.
+
+### D-22 · Execution corrections to Plan 1 (Tasks 1–8)
+- Windham County CT maps to Putnam (micropolitan), not Worcester. The 2023 file puts its successor region there.
+- Easterlin's state figures are in Easterlin (1957), Table Y-1, p. 753; the 1960 NBER chapter has regions only. 1919–21 values were transcribed from page photos the user supplied and verified three ways (see `references/manual_data/README.md`).
+- IPUMS 1940 county codes come from `COUNTYICP` (`COUNTYNHG` isn't offered for the full count). The NHGIS code = state FIPS × 100000 + COUNTYICP, as IPUMS documents.
+- API keys are kept out of error output: HTTP errors are re-raised with the bare URL, and CLI tracebacks don't print local variables.
+- **Decided by:** Claude (execution rulings, recorded in the plan ledger).
+
 ## Open items
-- Execute Plan 1 (`docs/superpowers/plans/2026-10-08-plan-1-scaffolding-and-rq0b.md`); then write Plan 2 (RQ0a, city-proper).
+- Finish Plan 1 on branch `plan-1-rq0b`. Waiting on: the BEA API outage (Task 6), the IPUMS 1940 extract (Task 8), and the user's ICPSR download (Task 9). Then write Plan 2 (RQ0a, city-proper).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.

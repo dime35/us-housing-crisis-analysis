@@ -25,7 +25,7 @@ For each decade d, with i a state or a metro:
 - β_d > 0 means population flows toward richer places. A falling β_d means that flow is weakening.
 - **Start-year rule:** each version starts at the first decade from which income exists for every decade onward. No decade is interpolated.
 - **Income, state version (1880–2020):** Klein (1880, 1890, 1900, 1910); Easterlin (1920); BEA state personal income per capita (annual from 1929; decade years 1930+ are used).
-- **Income, metro version (1940–2020):** 1940 full-count census wage and salary income (IPUMS), aggregated county → CBSA; Census median family income (1950, 1960); BEA personal income per capita (1969, used for 1970, onward).
+- **Income, metro version (1940–2020):** 1940 full-count census wage and salary income (IPUMS), aggregated county → CBSA; Census county median family income for 1950 and 1960 (1949 and 1959 income), from the County Data Books in ICPSR 2896 (Haines), with NHGIS table NT39 as a cross-check for 1950; BEA personal income per capita (1969, used for 1970, onward).
 - **Main figure:** β_d by decade for both versions.
 - **Tests:** run on the pooled unit × decade panel, with income interacted with period indicators, because 7–14 β_d values are too few for these tests:
   - Chow tests at 1950 and 1980;

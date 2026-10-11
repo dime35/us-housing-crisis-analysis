@@ -81,7 +81,8 @@ us_housing_crisis_analysis/
 ├── config.py          # paths, year ranges, featured cities, peer-group rules
 ├── sources/           # one module per source; each exposes download() and load()
 │   ├── census_decennial.py   # city-proper population 1790–2020
-│   ├── nhgis.py              # state population (1880+), county population (1900+), housing units (1940+), median family income (1950+)
+│   ├── nhgis.py              # state population (1880+), county population (1900+), housing units (1940+)
+│   ├── icpsr.py              # county median family income 1950, 1960 (ICPSR 2896, manual download; D-21)
 │   ├── ipums.py              # 1940 full-count census wage income, aggregated to counties
 │   ├── census_pep.py         # annual metro/county population estimates
 │   ├── bea.py                # metro GDP 2001+, county personal income 1969+, state income 1929+

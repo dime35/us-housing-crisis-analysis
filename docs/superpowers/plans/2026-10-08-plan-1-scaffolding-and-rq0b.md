@@ -49,7 +49,8 @@
 | `us_housing_crisis_analysis/sources/__init__.py` | `SOURCE_NAMES` registry and `get_source()` |
 | `us_housing_crisis_analysis/sources/_http.py` | `download_file()`, `require_env()` |
 | `us_housing_crisis_analysis/sources/_ipums.py` | Shared submit, wait and download for IPUMS extracts |
-| `us_housing_crisis_analysis/sources/nhgis.py` | State and county population 1790–2020; county median family income 1950 and 1960 |
+| `us_housing_crisis_analysis/sources/nhgis.py` | State and county population 1790–2020 |
+| `us_housing_crisis_analysis/sources/icpsr.py` | County median family income 1950 and 1960 (ICPSR 2896, manual download) |
 | `us_housing_crisis_analysis/sources/census_pep.py` | 2020 CBSA estimates base and county membership (validation only) |
 | `us_housing_crisis_analysis/sources/bea.py` | State per capita income 1929+; MSA per capita income 1969+ |
 | `us_housing_crisis_analysis/sources/manual.py` | Klein and Easterlin state income tables |
@@ -1709,134 +1710,87 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 9: NHGIS county median family income, 1950 and 1960
+### Task 9: ICPSR 2896 county median family income, 1950 and 1960
+
+> **Rewritten 2026-10-11 (D-21).** NHGIS has a county income table for 1950 (`1950_cPHA`, NT39) but none for 1960; its 1960 county dataset has population tables only. The source is now ICPSR study 2896 (Haines, *Historical, Demographic, Economic, and Social Data: The United States, 1790–2002*), County Data Book parts for 1952 (1949 income) and 1962 (1959 income). ICPSR has no API, and its terms forbid redistribution, so the user downloads the files by hand into `data/raw/icpsr/` (gitignored). NHGIS NT39 is used once, as a cross-check on 1950.
 
 **Files:**
-- Modify: `us_housing_crisis_analysis/sources/nhgis.py`, `us_housing_crisis_analysis/config.py`, `tests/test_nhgis.py`
-- Create: `tests/fixtures/nhgis/income_1950.csv`
+- Create: `us_housing_crisis_analysis/sources/icpsr.py`, `tests/fixtures/icpsr/` (layout copied from the real files), `tests/test_icpsr.py`
+- Modify: `sources/__init__.py` (append `"icpsr"`), `config.py` (`ICPSR_INCOME_FILES`), `Claude/research/sources.md`, `Claude/methods/analysis-methods.md`
 
 **Interfaces:**
-- Consumes: `geography.fips_from_gisjoin`, `_ipums.run_extract`, `_ipums.unpack_csvs`
+- Consumes: `schema.validate_long`, `config.RAW_DATA_DIR`
 - Produces:
-  - `config.NHGIS_INCOME_TABLES: dict[int, dict[str, str]]`, keyed by year, each with keys `dataset`, `table` and `column`
-  - `nhgis.parse_income(path: Path, year: int, column: str) -> pd.DataFrame`: long format; county rows, `variable="median_family_income"`, `unit="usd_current"`
-  - `nhgis.load()` now returns population and income rows together
+  - `config.ICPSR_INCOME_FILES: dict[int, dict[str, str]]`, keyed by census year (1950, 1960), each with `file` (name under `data/raw/icpsr/`), `state_col`, `county_col` and `income_col`
+  - `icpsr.MissingManualDownloadError(RuntimeError)`
+  - `icpsr.download(force=False) -> list[Path]`: downloads nothing; returns the files if present, otherwise raises `MissingManualDownloadError` with step-by-step download instructions
+  - `icpsr.parse_income(path: Path, year: int, spec: dict[str, str]) -> pd.DataFrame`: long format; county rows; `geo_id="county:SSCCC"`; `variable="median_family_income"`; `unit="usd_current"`; `source="icpsr"`; state and US summary rows dropped
+  - `icpsr.load() -> pd.DataFrame`
+  - Task 10 reads 1950–1960 income with `county_series(icpsr, "median_family_income", [1950, 1960])` (was `nhgis`).
 
-- [ ] **Step 1: Find the real dataset and table names.**
+- [ ] **Step 1: User downloads the files** (prerequisite). On https://www.icpsr.umich.edu/web/ICPSR/studies/2896, log in with a free account, open **Data & Documentation**, and download the parts for the **County Data Book 1952** and **County Data Book 1962** (the County Data Book parts are numbered from about 70 upward; check the part titles). Choose a delimited (tab or CSV) or Stata format, plus the codebook PDF. Put everything in `data/raw/icpsr/`.
 
-```bash
-venv/bin/python - <<'EOF'
-from us_housing_crisis_analysis.sources._ipums import client
-api = client()
-for page in api.get_metadata_catalog("nhgis", metadata_type="data_tables"):
-    for t in page["data"]:
-        text = str(t).lower()
-        if ("1950" in text or "1960" in text) and "median" in text and "income" in text:
-            print(t)
-EOF
-```
+- [ ] **Step 2: Inspect the real files.** For each part, print the header and find, in the codebook: the state and county code variables (are they FIPS or ICPSR codes?), the median family income variable and its exact concept (1949 data may be "families and unrelated individuals"), its units (dollars or tens of dollars), and how summary rows (US, states) are coded. If the county codes are ICPSR state codes rather than FIPS, add an ICPSR-state → FIPS mapping (`STATEICP` codes are documented by IPUMS) to `icpsr.py` with its own test. **If a part has no county median family income, stop and ask the user.**
 
-From the output, choose for each year the county-level table of median income of families. For 1950, this may be "families and unrelated individuals". Read the table's variable (column) code from its metadata, e.g. `api.get_metadata(DatasetMetadata("nhgis", "<dataset>"))` and its `data_tables`. **If no county-level 1950 median income table exists, stop and ask the user.** Without it, the metro version can't satisfy the no-gaps rule from 1940.
-
-- [ ] **Step 2: Record what you found in `config.py`:**
+- [ ] **Step 3: Record what you found in `config.py`:**
 
 ```python
-# NHGIS county median income tables for RQ0b metro income (found in Plan 1, Task 9, Step 1)
-NHGIS_INCOME_TABLES: dict[int, dict[str, str]] = {
-    1950: {"dataset": "<dataset name from Step 1>", "table": "<table name>", "column": "<variable code>"},
-    1960: {"dataset": "<dataset name from Step 1>", "table": "<table name>", "column": "<variable code>"},
+# ICPSR 2896 county median family income for RQ0b metro income (found in Plan 1, Task 9, Step 2)
+ICPSR_INCOME_FILES: dict[int, dict[str, str]] = {
+    1950: {"file": "<file name>", "state_col": "<var>", "county_col": "<var>", "income_col": "<var>"},
+    1960: {"file": "<file name>", "state_col": "<var>", "county_col": "<var>", "income_col": "<var>"},
 }
 ```
 
-Each `<...>` is replaced with the exact string printed in Step 1. Don't commit while any angle-bracket value remains.
+Don't commit while any angle-bracket value remains.
 
-- [ ] **Step 3: Create the fixture** `tests/fixtures/nhgis/income_1950.csv`, using the real column layout of NHGIS dataset CSVs:
+- [ ] **Step 4: Create the fixtures** in `tests/fixtures/icpsr/`, one per year: the real header, a US summary row, a state summary row, Baltimore city (24510), Baltimore County (24005), and one county with a blank or suppressed income, all in the real file's format.
 
-```csv
-GISJOIN,YEAR,STATE,STATEA,COUNTY,COUNTYA,INC001
-G2405100,1950,Maryland,240,Baltimore city,5100,3200
-G2400050,1950,Maryland,240,Baltimore County,0050,3600
-G4650015,1950,Somewhere,465,Old County,0015,
-```
-
-- [ ] **Step 4: Write the failing test** (append to `tests/test_nhgis.py`):
+- [ ] **Step 5: Write the failing tests** in `tests/test_icpsr.py`:
 
 ```python
-def test_parse_income(fixtures_dir):
-    df = validate_long(nhgis.parse_income(fixtures_dir / "nhgis/income_1950.csv", 1950, "INC001"))
-    assert set(df.geo_id) == {"county:24510", "county:24005"}  # blank value dropped
-    assert set(df.variable) == {"median_family_income"}
-    assert df.set_index("geo_id").loc["county:24510", "value"] == 3200.0
+import pytest
+
+from us_housing_crisis_analysis.config import ICPSR_INCOME_FILES
+from us_housing_crisis_analysis.schema import validate_long
+from us_housing_crisis_analysis.sources import icpsr
+
+
+@pytest.mark.parametrize("year", [1950, 1960])
+def test_parse_income_counties_only(fixtures_dir, year):
+    spec = ICPSR_INCOME_FILES[year]
+    df = validate_long(icpsr.parse_income(fixtures_dir / "icpsr" / spec["file"], year, spec))
+    assert {"county:24510", "county:24005"} <= set(df.geo_id)
+    assert df.geo_id.str.fullmatch(r"county:\d{5}").all()  # US and state summary rows dropped
+    assert set(df.variable) == {"median_family_income"} and set(df.year) == {year}
+    assert df.value.gt(0).all()  # blank or suppressed values dropped, never zero-filled
+
+
+def test_missing_files_explain_the_manual_download(tmp_path, monkeypatch):
+    monkeypatch.setattr(icpsr, "RAW_DIR", tmp_path)
+    with pytest.raises(icpsr.MissingManualDownloadError, match="icpsr.umich.edu.*2896"):
+        icpsr.download()
 ```
 
-Run: `venv/bin/python -m pytest tests/test_nhgis.py -q`. Expected: FAIL with `AttributeError: ... parse_income`.
+Add one assertion per fixture year pinning Baltimore city's income to the fixture value, after converting units if the file stores tens of dollars.
 
-- [ ] **Step 5: Implement** in `nhgis.py`. Add the imports `from us_housing_crisis_analysis.config import NHGIS_INCOME_TABLES` and `from us_housing_crisis_analysis.geography import fips_from_gisjoin`, then:
+Run: `venv/bin/python -m pytest tests/test_icpsr.py -q`. Expected: collection error (module missing).
 
-```python
-INCOME_DIR = RAW_DIR / "income_1950_1960"
+- [ ] **Step 6: Implement `sources/icpsr.py`**: `RAW_DIR = RAW_DATA_DIR / "icpsr"`; `download()` returns `[RAW_DIR / spec["file"] for spec in ICPSR_INCOME_FILES.values()]` when all exist, else raises `MissingManualDownloadError` naming the study URL, the two parts and the target directory; `parse_income()` reads the file (by extension: `.dta` with `pd.read_stata`, delimited with `pd.read_csv(dtype=str)`), builds 5-digit FIPS from the state and county columns, drops summary rows (county code 0 or blank) and non-positive or missing income, converts units to dollars, and returns the long format; `load()` concatenates both years and validates. Append `"icpsr"` to `SOURCE_NAMES`.
 
+- [ ] **Step 7: Run the tests and confirm they pass.** Run: `venv/bin/python -m pytest tests/test_icpsr.py -q`. Expected: all pass.
 
-def _income_files() -> dict[int, Path]:
-    return {year: INCOME_DIR / f"income_{year}.csv" for year in NHGIS_INCOME_TABLES}
+- [ ] **Step 8: Load and check.** Run: `venv/bin/python -m us_housing_crisis_analysis.dataset load --source icpsr`, then count counties per year. Expected: about 3,000 each, and the US median family income in the summary row matches the census figure (1949: about $3,083 for families; 1959: $5,660).
 
+- [ ] **Step 9: Cross-check 1950 against NHGIS NT39 (one time).** Request a small NHGIS extract of dataset `1950_cPHA`, table `NT39`, county level, into the scratchpad (not `data/raw`). Merge on FIPS and report the correlation of log income and the median absolute difference. Expected: correlation > 0.95. Record the result in `analysis-methods.md`. A low correlation means the two concepts differ (families vs. families and unrelated individuals) or a column is wrong; investigate before continuing.
 
-def download_income(force: bool = False) -> list[Path]:
-    files = _income_files()
-    if all(p.exists() for p in files.values()) and not force:
-        return list(files.values())
-    from ipumspy import AggregateDataExtract, Dataset
+- [ ] **Step 10: Update the docs.** `sources.md`: add an ICPSR 2896 row (parts used, access terms, access date) and remove "median family income" from the NHGIS row. `analysis-methods.md` RQ0b: the exact 1950 and 1960 income concepts and variable names, and the cross-check result.
 
-    extract = AggregateDataExtract(
-        collection="nhgis",
-        description="County median family income, 1950 and 1960",
-        datasets=[Dataset(t["dataset"], data_tables=[t["table"]], geog_levels=["county"])
-                  for t in NHGIS_INCOME_TABLES.values()],
-    )
-    run_extract(extract, INCOME_DIR)
-    patterns = {f"*{t['dataset']}*county*.csv": f"income_{year}.csv"
-                for year, t in NHGIS_INCOME_TABLES.items()}
-    return unpack_csvs(INCOME_DIR, patterns)
-
-
-def parse_income(path: Path, year: int, column: str) -> pd.DataFrame:
-    raw = _read(path)
-    fips = raw.GISJOIN.map(fips_from_gisjoin)
-    value = pd.to_numeric(raw[column], errors="coerce")
-    keep = fips.notna() & value.notna()
-    df = pd.DataFrame(
-        {
-            "geo_id": "county:" + fips.fillna(""), "geo_name": raw.COUNTY + ", " + raw.STATE,
-            "geo_level": "county", "country_iso3": "USA", "year": year,
-            "variable": "median_family_income", "value": value.astype("float64"),
-            "unit": "usd_current", "source": "nhgis",
-        }
-    )
-    return df[keep].astype({"year": "int64"}).reset_index(drop=True)
-```
-
-Change `download` so that it calls `download_income(force)` and returns both lists. Change `load` to:
-
-```python
-def load() -> pd.DataFrame:
-    pop = parse_population(A00_DIR / "a00_state.csv", A00_DIR / "a00_county.csv")
-    income = [parse_income(p, y, NHGIS_INCOME_TABLES[y]["column"]) for y, p in _income_files().items()]
-    return validate_long(pd.concat([pop, *income], ignore_index=True))
-```
-
-Update `test_download_skips_when_files_exist` so that it also creates `income_1950.csv` and `income_1960.csv` in a monkeypatched `INCOME_DIR`.
-
-- [ ] **Step 6: Run the tests and confirm they pass.** Run: `venv/bin/python -m pytest tests/test_nhgis.py -q`. Expected: `6 passed`.
-
-- [ ] **Step 7: Download and load.** Run: `venv/bin/python -m us_housing_crisis_analysis.dataset download --source nhgis && venv/bin/python -m us_housing_crisis_analysis.dataset load --source nhgis`. Then check `median_family_income` counts for 1950 and 1960; expect about 3,000 counties each. If the unpack pattern misses, the error lists the zip members; fix the pattern.
-
-- [ ] **Step 8: Update the docs.** In `analysis-methods.md` RQ0b, record the exact 1950 and 1960 income concepts and table names. In `sources.md`, add the NHGIS dataset names to the NHGIS row.
-
-- [ ] **Step 9: Commit.**
+- [ ] **Step 11: Commit.**
 
 ```bash
 git add us_housing_crisis_analysis tests Claude
-git commit -m "Add NHGIS county median family income for 1950 and 1960
+git commit -m "Add ICPSR 2896 county median family income for 1950 and 1960
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1854,7 +1808,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces:
   - `features.build_us_state_longrun(nhgis: pd.DataFrame, bea: pd.DataFrame, manual: pd.DataFrame) -> pd.DataFrame` with columns `geo_id, geo_name, year, population, income_pc, income_source`, for decade years 1880–2020
   - `features.county_series(nhgis_or_ipums: pd.DataFrame, variable: str, years) -> pd.DataFrame` with columns `county_fips, year, value` (harmonized and summed)
-  - `features.build_us_metro_longrun(nhgis: pd.DataFrame, ipums: pd.DataFrame, bea: pd.DataFrame, crosswalk: pd.DataFrame) -> pd.DataFrame` with columns `geo_id, geo_name, year, population, income_pc, income_source`, for decade years 1900–2020
+  - `features.build_us_metro_longrun(nhgis: pd.DataFrame, ipums: pd.DataFrame, icpsr: pd.DataFrame, bea: pd.DataFrame, crosswalk: pd.DataFrame) -> pd.DataFrame` with columns `geo_id, geo_name, year, population, income_pc, income_source`, for decade years 1900–2020
   - `features.unmatched_county_report(nhgis: pd.DataFrame) -> pd.DataFrame` with columns `year, county_id, population, share_of_us`
   - CLI: `python -m us_housing_crisis_analysis.features` writes `data/processed/us_state_longrun.parquet` and `us_metro_longrun.parquet`
   - `income_source` values:
@@ -1898,15 +1852,15 @@ def test_metro_panel_sums_counties_and_weights_medians():
     nhgis = long([("county:24510", "county", 1940, "population", 800),
                   ("county:24005", "county", 1940, "population", 200),
                   ("county:24510", "county", 1950, "population", 900),
-                  ("county:24005", "county", 1950, "population", 100),
-                  ("county:24510", "county", 1950, "median_family_income", 3000),
-                  ("county:24005", "county", 1950, "median_family_income", 4000)], "nhgis")
+                  ("county:24005", "county", 1950, "population", 100)], "nhgis")
+    icpsr = long([("county:24510", "county", 1950, "median_family_income", 3000),
+                  ("county:24005", "county", 1950, "median_family_income", 4000)], "icpsr")
     ipums = long([("county:24510", "county", 1940, "wage_income_total", 400_000),
                   ("county:24510", "county", 1940, "persons_ipums", 800),
                   ("county:24005", "county", 1940, "wage_income_total", 100_000),
                   ("county:24005", "county", 1940, "persons_ipums", 200)], "ipums")
     bea = long([("cbsa:12580", "metro", 1970, "income_pc", 4301)], "bea")
-    p = features.build_us_metro_longrun(nhgis, ipums, bea, crosswalk).set_index(["geo_id", "year"])
+    p = features.build_us_metro_longrun(nhgis, ipums, icpsr, bea, crosswalk).set_index(["geo_id", "year"])
     assert p.loc[("cbsa:12580", 1940), "population"] == 1000
     assert p.loc[("cbsa:12580", 1940), "income_pc"] == 500  # 500,000 wages / 1,000 persons
     assert p.loc[("cbsa:12580", 1950), "income_pc"] == 3100  # 0.9*3000 + 0.1*4000
@@ -1982,7 +1936,8 @@ def county_series(df: pd.DataFrame, variable: str, years) -> pd.DataFrame:
 
 
 def build_us_metro_longrun(
-    nhgis: pd.DataFrame, ipums: pd.DataFrame, bea: pd.DataFrame, crosswalk: pd.DataFrame
+    nhgis: pd.DataFrame, ipums: pd.DataFrame, icpsr: pd.DataFrame, bea: pd.DataFrame,
+    crosswalk: pd.DataFrame,
 ) -> pd.DataFrame:
     years = _decades(METRO_LONGRUN_START)
     cw = crosswalk[["county_fips", "cbsa_code", "cbsa_title"]]
@@ -2001,7 +1956,7 @@ def build_us_metro_longrun(
     inc1940 = (wages / persons).rename("income_pc").reset_index().assign(year=1940, income_source="ipums_1940_wages")
 
     # 1950-1960: county medians cannot be summed; use the population-weighted mean (approximation)
-    med = to_cbsa(county_series(nhgis, "median_family_income", [1950, 1960]))
+    med = to_cbsa(county_series(icpsr, "median_family_income", [1950, 1960]))
     med = med.merge(pop_c[["county_fips", "year", "value"]].rename(columns={"value": "w"}), on=["county_fips", "year"])
     med = (med.assign(vw=med.value * med.w).groupby(["cbsa_code", "year"])[["vw", "w"]].sum())
     inc5060 = (med.vw / med.w).rename("income_pc").reset_index().assign(income_source="census_median_family_income")
@@ -2033,11 +1988,11 @@ def unmatched_county_report(nhgis: pd.DataFrame) -> pd.DataFrame:
 @app.command()
 def main():
     read = lambda s: pd.read_parquet(INTERIM_DATA_DIR / f"{s}.parquet")  # noqa: E731
-    nhgis, bea, manual, ipums = read("nhgis"), read("bea"), read("manual"), read("ipums")
+    nhgis, bea, manual, ipums, icpsr = (read(s) for s in ("nhgis", "bea", "manual", "ipums", "icpsr"))
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     panels = {
         "us_state_longrun": build_us_state_longrun(nhgis, bea, manual),
-        "us_metro_longrun": build_us_metro_longrun(nhgis, ipums, bea, county_to_cbsa()),
+        "us_metro_longrun": build_us_metro_longrun(nhgis, ipums, icpsr, bea, county_to_cbsa()),
     }
     for name, df in panels.items():
         if df.duplicated(["geo_id", "year"]).any():
