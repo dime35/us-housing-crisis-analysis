@@ -16,11 +16,15 @@ Columns: `state_fips, state_name, year, value, unit, source, table_ref`.
 - **Version:** the 2009 working paper. The published 2013 version is paywalled and hasn't been compared yet. The source ID `klein_2013` follows the spec.
 - **Transcribed:** 2026-10-09, by Claude, from the PDF's text layer (`pdftotext -layout`; not OCR). The script checked that Klein's own 1880 and 1900 values in Table 6 equal Table 8 for all 48 states. Every fifth row was rechecked by eye against the table.
 
-### `source = easterlin_1960`: Easterlin, 1880, 1900 (and 1920, pending)
+### `source = easterlin_1960`: Easterlin, 1880, 1900, 1920
 
-- **Citation:** Easterlin, R. A. (1957). State income estimates. In Kuznets, Miller & Easterlin, *Population Redistribution and Economic Growth, United States, 1870–1950*, Vol. I. Table Y-1, p. 753. The source ID `easterlin_1960` follows the spec. The 1960 NBER chapter (c2475) reports regional figures only.
-- **1880 and 1900:** taken from Klein (2009) Table 6, pp. 52–53, which reprints Easterlin's Table Y-1 per capita figures next to Klein's. Same transcription date and method as above.
-- **1920 (Easterlin's 1919–21 average):** **not yet transcribed.** The 1957 volume is available on archive.org only as a borrow-only loan (`populationredist0001kuzn`). `test_committed_coverage_easterlin_1920` is a strict xfail until these rows are added.
+- **Citation:** Easterlin, R. A. (1957). State income estimates. In Kuznets, Miller & Easterlin, *Population Redistribution and Economic Growth, United States, 1870–1950*, Vol. I. Table Y-1, "Personal Income and Personal Income per Capita, 1880 to 1949–51", p. 753. The source ID `easterlin_1960` follows the spec. The 1960 NBER chapter (c2475) reports regional figures only.
+- **Copy used:** page photos of p. 753 supplied by the project owner on 2026-10-11, from the archive.org borrow-only copy (`populationredist0001kuzn`).
+- **1920** is Easterlin's 1919–21 average, in current dollars.
+- **Transcribed:** 2026-10-11, by Claude, from the page image, with three checks:
+  1. All 93 values for 1880 and 1900 read from the page equal the reprint in Klein (2009) Table 6. The 1880 and 1900 rows were first entered from that reprint.
+  2. The 1919–21 state totals of personal income (also read from p. 753) sum to 69,278 against the printed US total of 69,277.
+  3. The population each state implies for 1919–21 (total ÷ per capita) is within 1% of the 1920 census figure for all 48 states (median gap 0.01%). The 1920 census figures used came from Claude's knowledge, not a downloaded file.
 
 ### Coverage and territory rule
 

@@ -47,19 +47,9 @@ def test_committed_coverage():
     counts = df.groupby(["source", "year"]).state_fips.nunique()
     for year in (1880, 1890, 1900, 1910):
         assert counts[("klein_2013", year)] >= 38, year
-    for year in (1880, 1900):
+    for year in (1880, 1900, 1920):
         assert counts[("easterlin_1960", year)] >= 38, year
     assert not df.duplicated(["source", "year", "state_fips"]).any()
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason="Easterlin 1919-21 state figures (Easterlin 1957, Table Y-1) not yet transcribed; "
-    "the source is a borrow-only book. Remove this marker once the rows are added.",
-)
-def test_committed_coverage_easterlin_1920():
-    counts = committed().groupby(["source", "year"]).state_fips.nunique()
-    assert counts.get(("easterlin_1960", 1920), 0) >= 38
 
 
 def test_klein_and_easterlin_agree_where_they_overlap():
