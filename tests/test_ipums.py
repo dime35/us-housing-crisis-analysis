@@ -34,3 +34,11 @@ def test_download_skips_when_files_exist(tmp_path, monkeypatch):
     (tmp_path / "usa_00001.dat.gz").write_text("x")
     monkeypatch.setattr(ipums, "run_extract", lambda *a, **k: (_ for _ in ()).throw(AssertionError))
     assert len(ipums.download()) == 2
+
+
+def test_nhgis_code_built_from_statefip_and_countyicp():
+    # COUNTYICP = 3-digit FIPS county + trailing digit (0 = has FIPS, 5 = dissolved county)
+    raw = pd.DataFrame({"STATEFIP": [24, 46], "COUNTYICP": [5100, 15], "INCWAGE": [1, 2]})
+    out = ipums.with_nhgis_code(raw)
+    assert out.COUNTYNHG.tolist() == [2405100, 4600015]
+    assert set(ipums.to_long(ipums.aggregate_wages([out])).geo_id) == {"county:24510", "county:nhgis-4600015"}

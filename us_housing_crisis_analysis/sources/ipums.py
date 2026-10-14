@@ -14,7 +14,9 @@ from us_housing_crisis_analysis.sources._ipums import run_extract
 
 RAW_DIR = RAW_DATA_DIR / "ipums"
 SAMPLE = "us1940b"  # 1940 100% (full count)
-VARIABLES = ["STATEFIP", "COUNTYNHG", "INCWAGE"]
+# COUNTYNHG is not offered for the 1940 full count; COUNTYICP is, and converts directly (see
+# with_nhgis_code).
+VARIABLES = ["STATEFIP", "COUNTYICP", "INCWAGE"]
 INCWAGE_TOPCODE = 5001
 INCWAGE_MISSING = 999998
 CHUNKSIZE = 2_000_000
@@ -35,6 +37,13 @@ def download(force: bool = False) -> list[Path]:
     )
     run_extract(extract, RAW_DIR)
     return _files()
+
+
+def with_nhgis_code(df: pd.DataFrame) -> pd.DataFrame:
+    """Add COUNTYNHG, the 7-digit NHGIS county code: state FIPS + "0" + COUNTYICP. IPUMS documents
+    COUNTYICP as the 3-digit FIPS county code plus a trailing digit (0 for counties with a FIPS
+    code, 5 for dissolved ones), compatible with NHGIS codes."""
+    return df.assign(COUNTYNHG=df["STATEFIP"].astype("int64") * 100_000 + df["COUNTYICP"].astype("int64"))
 
 
 def aggregate_wages(chunks: Iterable[pd.DataFrame]) -> pd.DataFrame:
@@ -72,5 +81,5 @@ def load() -> pd.DataFrame:
     ddi_path = next(RAW_DIR.glob("usa_*.xml"))
     ddi = readers.read_ipums_ddi(ddi_path)
     chunks = readers.read_microdata_chunked(ddi, ddi_path.with_suffix(".dat.gz"), chunksize=CHUNKSIZE)
-    agg = aggregate_wages(ch[VARIABLES] for ch in chunks)
+    agg = aggregate_wages(with_nhgis_code(ch[VARIABLES]) for ch in chunks)
     return validate_long(to_long(agg))
