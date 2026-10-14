@@ -175,7 +175,7 @@ These were made by Claude while drafting the spec and haven't been explicitly co
   - BEA zeros are dropped at the state level too (Alaska and Hawaii report 0 for 1929–1949).
 - **Why:** without the territory mapping, Klein's 1880–1910 income for 7–8 western states had no population to attach to, and the metro build lost 1.9% of 1900 population. Territory county numbers aren't FIPS, so a code rule only works for Arizona and Hawaii; name matching follows NHGIS's own nominal linking. The Indian Territory nations can't be assigned to counties without area weighting, and the 1900 metro rows aren't used by RQ0b (which starts in 1940).
 - **Alternatives:** area-weighting Indian Territory nations onto 1907 counties; leaving territories out of the 1880–1900 state panel; a `nhgis` state-only start year of 1910.
-- **Decided by:** Claude (execution ruling; reported to the user 2026-10-14).
+- **Decided by:** user (approved 2026-10-14); proposed by Claude.
 
 ## Open items
 - Finish Plan 1 on branch `plan-1-rq0b`. Tasks 1–10 are complete; next are Tasks 11–12. Then write Plan 2 (RQ0a, city-proper).
