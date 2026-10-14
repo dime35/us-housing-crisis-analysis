@@ -17,7 +17,7 @@ Answer (spec partner):
   3. Adding Plan 1's 1940–60 decade data to the metro series: not recommended (mixes ten-year and one-year data; 1940 metro income is wages only).
 - **Recommendation:** keep 15% for the main metro result; add a 5% version as a check; write "at or before" when the estimate lands on the edge; rely on the 1929+ state series for early-1970s dating. If approved, the spec partner edits §4.2–4.3 and §7.
 
-**Owner decision:** pending.
+**Owner decision:** accepted (15% main + 5% check), 2026-10-14.
 
 **Also noted:** §9 still says the Plan 1 review is "in progress"; the review fixes are committed (D-26), so the precondition for decision 1 (order of work) is met. To be updated when the spec is next edited.
 
@@ -66,3 +66,8 @@ No spec edits were made. Owner decisions still pending on everything below.
 - County personal income and population: 1969–2024.
 - State income per person: 1929–2025.
 - State population: not downloaded yet (SAINC1 line 2, the one new request the spec lists).
+
+## Owner decisions (2026-10-14, main session)
+- Decisions 1–4: all accepted as recommended. Recorded in spec §8.
+- Edits made: §3 (D-27 drops), §4.2 (5% check, "at or before"), §4.3 (5% row), §5 (`trim` column), §6 (D-27 data test), §7 (risks row), §8, §9 (item g).
+- Items a–e: pending the owner's decision.

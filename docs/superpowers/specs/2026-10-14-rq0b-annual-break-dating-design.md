@@ -44,6 +44,7 @@ This plan uses **year-by-year data** to narrow that down. BEA publishes income a
 - **Population is partly estimated between censuses.** Census mid-year estimates are revised to meet the next census, which spreads any surprise smoothly across the decade. That can blur a break's timing by a few years. The break-year range will be correspondingly wider; it isn't hidden.
 - **`us_metro_annual` is started early.** The spec plans it for RQ2/RQ4 (2000+, adding permits, prices and the Wharton index in build step 5). This plan creates it with population and income from 1969. Step 5 adds columns; it doesn't create a second panel.
 - **Same geography rules as Plan 1:** 2023 CBSAs from counties, Connecticut's 8 old counties, BEA combo areas and zero placeholders as in D-23 and D-24.
+- **County splits across metro lines (D-27).** A metro-year whose one-year growth crosses a county split is dropped, as in the decade panel: Broomfield 2001, La Paz 1983, Cibola 1981. (Los Alamos 1949 and Menominee 1961 fall before 1969.)
 
 ## 4. Methods
 
@@ -62,6 +63,8 @@ Pooled model on **annual** growth, so the observations don't overlap:
 - α_t are year fixed effects. They absorb anything that hits every place the same year (recessions, national migration trends, how the Census estimates were revised).
 - **Break year T:** try every candidate year, leaving out the first and last 15% of years so each side has enough data. The estimate is the year with the best fit (lowest sum of squared residuals, the standard Bai-Perron choice).
 - **Candidate years in practice:** states 1929–2024 → about 1943–2009; states 1969–2024 and metros 1969–2024 → about 1977–2015. So **only the long state series can date a break in the early or mid-1970s.** The metro and short-state versions test whether there was a break from the late 1970s on, and are read that way.
+- **5% trimming as a check (metros and the 1969+ states).** Earliest candidate about 1972. Estimates near the edge rest on only 3–5 "before" years and the critical value is higher (Andrews, one restriction, 5% level: about 8.85 at 15% trimming vs. about 9.8 at 5%), so the 15% result stays the main one.
+- **Edge estimates.** When the estimated year is the first candidate year, it is reported as "at or before" that year: the test can detect an earlier break but can only place it at the edge.
 - **Is there a break at all?** For each candidate T, the Wald statistic for β_before = β_after uses standard errors clustered by unit (robust to a place's own year-to-year correlation). The largest of these (sup-Wald) is compared with Andrews' (1993) critical values for one restriction at the trimming actually used, computed by simulating the statistic's limiting distribution in the code rather than copied from a table. Ordinary p-values would overstate significance, because we picked the year that fits best.
 - **Range for the year:** resample units (states or metros) with replacement, re-estimate T each time (999 draws), and report the middle 90% of the estimates. Resampling whole units keeps each unit's years together, so it respects the year-to-year correlation that the estimates-revision smoothing creates.
 - **More than one break:** as a cross-check, the Plan 1 BIC search (`breaks.break_search`) is run on the annual panel with up to 3 breaks and segments of at least 5 years.
@@ -76,6 +79,7 @@ Pooled model on **annual** growth, so the observations don't overlap:
 | **Five-year windows** in 4.1 | Shows the picture doesn't depend on the ten-year horizon |
 | **Income standardized within year** | Same as Plan 1; guards against changes in the spread of incomes |
 | **States 1969–2024 only** | Puts the state and metro results on the same years |
+| **5% trimming** (metros and 1969+ states) | Lets the test name break years back to about 1972 |
 | **Cross-check with the decade panel** | The rolling β for windows starting in 1970, 1980, … should be close to the decade β for those decades. A big gap means a data problem, not a finding |
 
 The energy-state rule and the resulting list are recorded in `analysis-methods.md`, and the list is printed in the notebook so a reader can see which states it removes.
@@ -89,13 +93,13 @@ The energy-state rule and the resulting list are recorded in `analysis-methods.m
 | `modeling/annual_breaks.py` (new) | `rolling_betas`, `annual_growth_panel`, `sup_wald_break`, `bootstrap_break_year`; reuses Plan 1's design-matrix logic, generalized from decades to any period column | `breaks.py`, statsmodels |
 | Notebook `1.1-lr-us-structural-break` (extend) | New section "Annual data: when did the break happen?" with figure, table and updated finding | the above |
 
-Outputs: `reports/figures/rq0b_annual_betas.png` (rolling β for states and metros, with the estimated break year and its range shaded) and `reports/tables/rq0b_annual_tests.csv` (columns `version, spec, break_year, range_low, range_high, sup_wald, beta_before, beta_after, n_units, years`).
+Outputs: `reports/figures/rq0b_annual_betas.png` (rolling β for states and metros, with the estimated break year and its range shaded) and `reports/tables/rq0b_annual_tests.csv` (columns `version, spec, trim, break_year, range_low, range_high, sup_wald, beta_before, beta_after, n_units, years`).
 
 ## 6. Testing
 
 - **Synthetic recovery (fast tests):** an annual panel with a planted break in 1978 → estimated T within ±2 years, and the range covers 1978. No planted break → sup-Wald below the 5% critical value. A planted temporary boom-bust in a subset of "energy" units → the without-energy specification shows no break.
 - **Rolling β:** a planted constant slope is recovered in every window.
-- **Data tests:** annual state population sums within 1% of the census count for 1970, 1980, …, 2020; annual metro population for 2020 within 1% of the Census estimates base (as in Plan 1); no zero or negative income; the panels are unique by (unit, year); the decade cross-check above holds: each rolling β for a window starting in 1970, 1980, …, 2010 lies inside the 95% interval of the decade β for that decade (metros: the BEA decades 1970+; states: 1930+).
+- **Data tests:** the metro-years dropped for county splits (Broomfield 2001, La Paz 1983, Cibola 1981; D-27) are absent from `us_metro_annual`; annual state population sums within 1% of the census count for 1970, 1980, …, 2020; annual metro population for 2020 within 1% of the Census estimates base (as in Plan 1); no zero or negative income; the panels are unique by (unit, year); the decade cross-check above holds: each rolling β for a window starting in 1970, 1980, …, 2010 lies inside the 95% interval of the decade β for that decade (metros: the BEA decades 1970+; states: 1930+).
 
 ## 7. Risks
 
@@ -106,13 +110,16 @@ Outputs: `reports/figures/rq0b_annual_betas.png` (rolling β for states and metr
 | Annual growth is noisy | The test uses the pooled panel (thousands of unit-years); the picture uses ten-year windows |
 | Searching over years overstates significance | Andrews critical values for sup-Wald; never an ordinary p-value for the chosen year |
 | 1929–1945 (Depression, war) dominates the state series | The 1969–2024 state specification; candidate years trimmed at both ends |
-| A break before about 1977 can't be dated with metros or the 1969+ state series (15% trimming) | Stated plainly; the 1929–2024 state version is the instrument for earlier dates |
+| A break before about 1977 can't be dated with metros or the 1969+ state series (15% trimming) | 5% trimming check (earliest about 1972); edge estimates written "at or before"; the 1929–2024 state version is the instrument for earlier dates |
 
 ## 8. Decisions for the user
 
-1. **Order of work.** Recommended: run Plan 1b on a new branch off `plan-1-rq0b` after the Plan 1 review fixes are in, before Plan 2 (RQ0a). Alternative: Plan 2 first, Plan 1b later.
-2. **Energy-state rule.** Recommended: 1980 mining share of earnings at least 3× the national share (an objective rule; the resulting list is shown before results are run). Alternative: a hand-picked list (TX, OK, LA, WY, AK, NM, WV, ND).
-3. **Where results go.** Recommended: a new section in the existing RQ0b notebook and one paragraph in the RQ0b results, so RQ0b stays one story. Alternative: a separate notebook.
+All decided by the owner on 2026-10-14:
+
+1. **Order of work.** Plan 1b runs on a new branch off `plan-1-rq0b`, before Plan 2 (RQ0a). (The Plan 1 review fixes are in: D-26, D-27.)
+2. **Energy-state rule.** 1980 mining share of earnings at least 3× the national share. The resulting list is shown to the owner before results are run; if it misses an obvious oil state, the hand-picked list (TX, OK, LA, WY, AK, NM, WV, ND) is run as a robustness check.
+3. **Where results go.** A new section in the existing RQ0b notebook and one paragraph in the RQ0b results, so RQ0b stays one story.
+4. **Metro trimming.** 15% for the main result, 5% as a check; edge estimates written "at or before"; the 1929–2024 state series dates early-1970s breaks (§4.2).
 
 ## 9. Where this sits in the master plan
 
@@ -121,7 +128,7 @@ The spec's build order (§10) has 8 steps. Status and where Plan 1b fits:
 | Step | Content | Research questions | Status |
 |---|---|---|---|
 | 1 | Scaffolding: dependencies, config, long format, test harness | — | **Done** (Plan 1) |
-| 2a | Tier 0 US data → `us_state_longrun`, `us_metro_longrun` → RQ0b decade analysis | RQ0b | **Done** (Plan 1); whole-branch review in progress |
+| 2a | Tier 0 US data → `us_state_longrun`, `us_metro_longrun` → RQ0b decade analysis | RQ0b | **Done** (Plan 1); review fixes committed (D-26, D-27) |
 | **2b** | **Annual data → `us_state_annual`, `us_metro_annual` (1969+) → RQ0b break dating** | **RQ0b** | **This design (Plan 1b)** |
 | 2c | City-proper population (Census decennial) → RQ0a city vs. metro | RQ0a | Next (Plan 2) |
 | 3 | Tier 0 global: UN WUP, World Bank, Maddison → `global_agglomerations` | RQ0c | Planned |
