@@ -66,10 +66,12 @@ Pooled model on **annual** growth, so the observations don't overlap:
 - **5% trimming as a check (metros and the 1969+ states).** Earliest candidate about 1972. Estimates near the edge rest on only 3–5 "before" years and the critical value is higher (Andrews, one restriction, 5% level: about 8.85 at 15% trimming vs. about 9.8 at 5%), so the 15% result stays the main one.
 - **Edge estimates.** When the estimated year is the first candidate year, it is reported as "at or before" that year: the test can detect an earlier break but can only place it at the edge.
 - **Is there a break at all?** For each candidate T, the Wald statistic for β_before = β_after uses standard errors clustered by unit (robust to a place's own year-to-year correlation). The largest of these (sup-Wald) is compared with Andrews' (1993) critical values for one restriction at the trimming actually used, computed by simulating the statistic's limiting distribution in the code rather than copied from a table. Ordinary p-values would overstate significance, because we picked the year that fits best.
-- **Range for the year:** resample units (states or metros) with replacement, re-estimate T each time (999 draws), and report the middle 90% of the estimates. Resampling whole units keeps each unit's years together, so it respects the year-to-year correlation that the estimates-revision smoothing creates.
+- **Range for the year:** resample units (states or metros) with replacement, re-estimate T each time (999 draws), and report the middle 90% of the estimates. Resampling whole units keeps each unit's years together, so it respects the year-to-year correlation that the estimates-revision smoothing creates. This kind of resampling isn't guaranteed to give a correct range for a break year, so it is checked by simulation (§6), and Bai's (1997) standard interval for the break date is reported next to it.
 - **More than one break:** as a cross-check, the Plan 1 BIC search (`breaks.break_search`) is run on the annual panel with up to 3 breaks and segments of at least 5 years.
 
 **Plain reading of the outputs:** sup-Wald says whether a change happened; T says when it most likely happened; the range says how sure we are about the year; β_before and β_after say how strong the pull toward income was on each side.
+
+**Two scales for β.** β_before and β_after measure one year of growth, so they are about 1/10 the size of the ten-year β in 4.1 and in Plan 1. They are stored under names that say so (`beta_before_annual`, `beta_after_annual`) and are also shown ×10 (`beta_before_10y`, `beta_after_10y`) wherever they sit next to decade results.
 
 ### 4.3 Robustness
 
@@ -79,6 +81,7 @@ Pooled model on **annual** growth, so the observations don't overlap:
 | **Five-year windows** in 4.1 | Shows the picture doesn't depend on the ten-year horizon |
 | **Income standardized within year** | Same as Plan 1; guards against changes in the spread of incomes |
 | **States 1969–2024 only** | Puts the state and metro results on the same years |
+| **Without WWII years** (state series: growth years 1940–1946 dropped) | Annual state population in those years swings with troop moves and war industry |
 | **5% trimming** (metros and 1969+ states) | Lets the test name break years back to about 1972 |
 | **Cross-check with the decade panel** | The rolling β for windows starting in 1970, 1980, … should be close to the decade β for those decades. A big gap means a data problem, not a finding |
 
@@ -93,13 +96,14 @@ The energy-state rule and the resulting list are recorded in `analysis-methods.m
 | `modeling/annual_breaks.py` (new) | `rolling_betas`, `annual_growth_panel`, `sup_wald_break`, `bootstrap_break_year`; reuses Plan 1's design-matrix logic, generalized from decades to any period column | `breaks.py`, statsmodels |
 | Notebook `1.1-lr-us-structural-break` (extend) | New section "Annual data: when did the break happen?" with figure, table and updated finding | the above |
 
-Outputs: `reports/figures/rq0b_annual_betas.png` (rolling β for states and metros, with the estimated break year and its range shaded) and `reports/tables/rq0b_annual_tests.csv` (columns `version, spec, trim, break_year, range_low, range_high, sup_wald, beta_before, beta_after, n_units, years`).
+Outputs: `reports/figures/rq0b_annual_betas.png` (rolling β for states and metros, with the estimated break year and its range shaded) and `reports/tables/rq0b_annual_tests.csv` (columns `version, spec, trim, break_year, range_low, range_high, bai_low, bai_high, sup_wald, beta_before_annual, beta_after_annual, beta_before_10y, beta_after_10y, n_units, years`).
 
 ## 6. Testing
 
 - **Synthetic recovery (fast tests):** an annual panel with a planted break in 1978 → estimated T within ±2 years, and the range covers 1978. No planted break → sup-Wald below the 5% critical value. A planted temporary boom-bust in a subset of "energy" units → the without-energy specification shows no break.
+- **Range coverage (slow test):** across at least 200 synthetic panels with a planted break year, the bootstrap 90% range contains the planted year 80–97% of the time. Outside that band the range is not used, and Bai's interval becomes the reported range.
 - **Rolling β:** a planted constant slope is recovered in every window.
-- **Data tests:** the metro-years dropped for county splits (Broomfield 2001, La Paz 1983, Cibola 1981; D-27) are absent from `us_metro_annual`; annual state population sums within 1% of the census count for 1970, 1980, …, 2020; annual metro population for 2020 within 1% of the Census estimates base (as in Plan 1); no zero or negative income; the panels are unique by (unit, year); the decade cross-check above holds: each rolling β for a window starting in 1970, 1980, …, 2010 lies inside the 95% interval of the decade β for that decade (metros: the BEA decades 1970+; states: 1930+).
+- **Data tests:** the metro-years dropped for county splits (Broomfield 2001, La Paz 1983, Cibola 1981; D-27) are absent from `us_metro_annual`; annual state population sums within 1% of the census count for 1930, 1940, …, 2020 (Alaska and Hawaii excluded from both sides before 1950, since BEA reports zeros for them; D-24); annual metro population for 2020 within 1% of the Census estimates base (as in Plan 1); no zero or negative income; the panels are unique by (unit, year); the decade cross-check above holds: each rolling β for a window starting in 1970, 1980, …, 2010 lies inside the 95% interval of the decade β for that decade (metros: the BEA decades 1970+; states: 1930+).
 
 ## 7. Risks
 
@@ -110,6 +114,7 @@ Outputs: `reports/figures/rq0b_annual_betas.png` (rolling β for states and metr
 | Annual growth is noisy | The test uses the pooled panel (thousands of unit-years); the picture uses ten-year windows |
 | Searching over years overstates significance | Andrews critical values for sup-Wald; never an ordinary p-value for the chosen year |
 | 1929–1945 (Depression, war) dominates the state series | The 1969–2024 state specification; candidate years trimmed at both ends |
+| WWII troop and war-industry moves distort 1940–1946 state population | Without-WWII-years check (§4.3) |
 | A break before about 1977 can't be dated with metros or the 1969+ state series (15% trimming) | 5% trimming check (earliest about 1972); edge estimates written "at or before"; the 1929–2024 state version is the instrument for earlier dates |
 
 ## 8. Decisions for the user
