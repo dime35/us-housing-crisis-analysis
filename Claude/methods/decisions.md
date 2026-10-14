@@ -177,8 +177,15 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Alternatives:** area-weighting Indian Territory nations onto 1907 counties; leaving territories out of the 1880–1900 state panel; a `nhgis` state-only start year of 1910.
 - **Decided by:** user (approved 2026-10-14); proposed by Claude.
 
+### D-25 · Notebook execution and figure style (Plan 1 Task 12)
+- **Decision:** `make notebooks` runs `python -m nbconvert` with the `python3` kernel as seen from the venv, not `python -m jupyter nbconvert`. Figures use a fixed categorical color order (validated for colorblind separation and contrast) with a marker shape per series and direct labels at line ends; `plots.SERIES_COLORS` is the order.
+- **Why:** `python -m jupyter nbconvert` resolves the `jupyter-nbconvert` subcommand on the shell PATH, which on this machine is a separate installation (`~/ENTER`) whose kernel lacks the project's packages. Calling the module directly keeps execution inside the venv.
+- **Alternatives:** registering a project kernel (unnecessary: the venv's own `python3` kernel is found once nbconvert runs from the venv).
+- **Decided by:** Claude (execution ruling).
+- Judgment calls from Tasks 3–11 are recorded in D-21 to D-24 and the plan ledger.
+
 ## Open items
-- Finish Plan 1 on branch `plan-1-rq0b`. Tasks 1–10 are complete; next are Tasks 11–12. Then write Plan 2 (RQ0a, city-proper).
+- Plan 1 (scaffolding and RQ0b) is code-complete on branch `plan-1-rq0b` (Tasks 1–12). Next: the whole-branch review, then Plan 2 (RQ0a, city-proper).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.

@@ -1,0 +1,19 @@
+version,spec,test,statistic,p_value,breaks
+states,main,chow_1950,0.0014467265472914556,0.9696590915930968,
+states,main,chow_1980,2.816389288517558,0.0933060820849374,
+states,main,break_search_bic,-2660.873897432651,,
+states,standardized income,chow_1950,2.134453133084396,0.14402181559650454,
+states,standardized income,chow_1980,13.532252069297522,0.00023449848223695626,
+states,standardized income,break_search_bic,-2658.9605395435574,,1970
+states,drop source-change decades,chow_1950,0.02472642781154532,0.8750506674836471,
+states,drop source-change decades,chow_1980,3.4496251852090274,0.06326611516257466,
+states,drop source-change decades,break_search_bic,-2235.164567385574,,
+metros,main,chow_1950,6.9115487756270895,0.008564077798215483,
+metros,main,chow_1980,3.410772223160883,0.06477212888091065,
+metros,main,break_search_bic,-12028.601439460488,,1970
+metros,standardized income,chow_1950,8.71795455744103,0.0031509135711668967,
+metros,standardized income,chow_1980,2.067084841154326,0.15050897099440633,
+metros,standardized income,break_search_bic,-12023.877166073617,,1970
+metros,drop source-change decades,chow_1950,5.346885090203383,0.020759325329054883,
+metros,drop source-change decades,chow_1980,6.300799258750574,0.012068354735768424,
+metros,drop source-change decades,break_search_bic,-9614.4303518835,,1990

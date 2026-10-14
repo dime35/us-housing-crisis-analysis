@@ -86,3 +86,11 @@ Assignment rules are defined in `config.py` and recorded here once implemented. 
 - dropping featured cities;
 - alternative time windows;
 - dropping the developing peer group.
+
+## Results log
+
+- **RQ0b, 2026-10-14 (Plan 1; notebook `1.1-lr-us-structural-break`, table `reports/tables/rq0b_tests.csv`, figure `reports/figures/rq0b_betas.png`):**
+  - State β_d is positive 1880–1960 (0.03–0.28) and zero or negative from 1990 (−0.08 to −0.01), matching the direction in Ganong & Shoag (2017).
+  - States: Chow 1950 p = 0.97, 1980 p = 0.09; BIC search: no break. Standardized income: Chow 1980 p < 0.001, break at 1970. Source-change decades dropped: Chow 1980 p = 0.06, no break.
+  - Metros: Chow 1950 p = 0.009, 1980 p = 0.06; BIC search: 1970 (also the switch to BEA income). Standardized income: 1950 p = 0.003, break at 1970. Source-change decades (1950, 1970) dropped: 1950 p = 0.02, 1980 p = 0.01, break at 1990.
+  - Reading: the decline in income-directed growth is clear, but its timing (1970, 1980 or 1990) is not sharply identified with decadal data.

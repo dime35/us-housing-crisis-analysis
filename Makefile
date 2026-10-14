@@ -64,7 +64,7 @@ features:
 ## Execute all notebooks in order
 .PHONY: notebooks
 notebooks:
-	$(PYTHON_INTERPRETER) -m jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
+	$(PYTHON_INTERPRETER) -m nbconvert --to notebook --execute --inplace --ExecutePreprocessor.kernel_name=python3 notebooks/*.ipynb
 
 ## Run all tests (data tests skip when data/ is not built)
 .PHONY: test
