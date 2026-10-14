@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from us_housing_crisis_analysis.config import RAW_DATA_DIR
+from us_housing_crisis_analysis.config import CROSSWALKS_DIR, RAW_DATA_DIR
 from us_housing_crisis_analysis.geography import fips_from_nhgis_code
 from us_housing_crisis_analysis.schema import validate_long
 from us_housing_crisis_analysis.sources._ipums import run_extract
@@ -39,11 +39,22 @@ def download(force: bool = False) -> list[Path]:
     return _files()
 
 
+def load_countyicp_fixes() -> pd.DataFrame:
+    return pd.read_csv(CROSSWALKS_DIR / "countyicp_fixes.csv", dtype={"county_fips": str})
+
+
 def with_nhgis_code(df: pd.DataFrame) -> pd.DataFrame:
-    """Add COUNTYNHG, the 7-digit NHGIS county code: state FIPS + "0" + COUNTYICP. IPUMS documents
-    COUNTYICP as the 3-digit FIPS county code plus a trailing digit (0 for counties with a FIPS
-    code, 5 for dissolved ones), compatible with NHGIS codes."""
-    return df.assign(COUNTYNHG=df["STATEFIP"].astype("int64") * 100_000 + df["COUNTYICP"].astype("int64"))
+    """Add COUNTYNHG, the 7-digit NHGIS county code: state FIPS + "0" + COUNTYICP. COUNTYICP is
+    the ICPSR county code, which is usually the 3-digit FIPS county code plus a trailing digit
+    (0 for counties with a FIPS code, 5 for dissolved ones). Where ICPSR numbered counties
+    differently (all of Maryland after Baltimore County, and a few others), countyicp_fixes.csv
+    gives the FIPS county code."""
+    fixes = load_countyicp_fixes()
+    override = dict(zip(fixes.statefip * 10_000 + fixes.countyicp, fixes.county_fips.astype("int64") * 10))
+    state = df["STATEFIP"].astype("int64")
+    icp = df["COUNTYICP"].astype("int64")
+    icp = (state * 10_000 + icp).map(override).fillna(icp).astype("int64")
+    return df.assign(COUNTYNHG=state * 100_000 + icp)
 
 
 def aggregate_wages(chunks: Iterable[pd.DataFrame]) -> pd.DataFrame:

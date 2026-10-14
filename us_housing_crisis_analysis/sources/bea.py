@@ -51,10 +51,14 @@ def download(force: bool = False) -> list[Path]:
         download_file(API_URL, dest, force=force, params=params)
         if not existed:
             try:
-                _results(json.loads(dest.read_text()))
+                payload = json.loads(dest.read_text())
+                _results(payload)
             except BeaApiError:
                 dest.unlink()  # never cache an error payload
                 raise
+            # BEA echoes the request, including the UserID (API key); never keep it on disk
+            payload["BEAAPI"].pop("Request", None)
+            dest.write_text(json.dumps(payload))
         paths.append(dest)
     return paths
 

@@ -156,7 +156,7 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 ### D-22 · Execution corrections to Plan 1 (Tasks 1–9)
 - Windham County CT maps to Putnam (micropolitan), not Worcester. The 2023 file puts its successor region there.
 - Easterlin's state figures are in Easterlin (1957), Table Y-1, p. 753; the 1960 NBER chapter has regions only. 1919–21 values were transcribed from page photos the user supplied and verified three ways (see `references/manual_data/README.md`).
-- IPUMS 1940 county codes come from `COUNTYICP` (`COUNTYNHG` isn't offered for the full count). The NHGIS code = state FIPS × 100000 + COUNTYICP, as IPUMS documents.
+- IPUMS 1940 county codes come from `COUNTYICP` (`COUNTYNHG` isn't offered for the full count). The NHGIS code = state FIPS × 100000 + COUNTYICP, as IPUMS documents. **Partly superseded by D-26:** the rule fails for 24 codes (all of Maryland after Baltimore County, and five others), which are now overridden.
 - API keys are kept out of error output: HTTP errors are re-raised with the bare URL, and CLI tracebacks don't print local variables.
 - ICPSR 2896 (Task 9): `ICPSR_INCOME_FILES` takes `member` (the Stata file inside the downloaded zip) and `fips_col` instead of the plan's `state_col`/`county_col`, because the 1952 `statefip`/`counfip` columns aren't FIPS codes; both years carry a correct 5-digit `fips` column (1952 matches 1962 by name for all 3,102 shared counties).
 - **Decided by:** Claude (execution rulings, recorded in the plan ledger).
@@ -183,6 +183,17 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Alternatives:** registering a project kernel (unnecessary: the venv's own `python3` kernel is found once nbconvert runs from the venv).
 - **Decided by:** Claude (execution ruling).
 - Judgment calls from Tasks 3–11 are recorded in D-21 to D-24 and the plan ledger.
+
+### D-26 · Fixes from the Plan 1 whole-branch review
+- **Decision:**
+  - **1940 county codes:** `references/crosswalks/countyicp_fixes.csv` overrides 24 COUNTYICP codes where ICPSR's numbering differs from FIPS × 10: 19 Maryland counties (Calvert on), Ste. Genevieve MO and Warwick VA (both from the ICPSR 2896 files, which list ICPSR and FIPS codes side by side), and Pershing NV, Ormsby NV and Union OR (matched on 1940 population against NHGIS). A data test now compares every county's 1940 IPUMS persons with its NHGIS population (gap ≤ max(7%, 100 people)).
+  - **1940 missing wages:** a robustness variant, `income_pc_wages_reported`, leaves people with a missing wage out of the denominator; it is reported next to the main specification.
+  - **BIC break search:** the penalty counts break dates as parameters (Yao 1988 convention).
+  - **BEA raw files:** the echoed request, which contains the API key, is removed before saving.
+  - **Smaller items:** 1900 "Persons in the Military" dropped from the state panel; the unmatched-population test tightened to 0.2%; the growth plausibility test no longer compares across missing decades; spec corrected (risk table; income is measured at the start of decade d); `geography.md` no longer claims boundary-standardized counts.
+- **Why:** the review found Maryland's 1940 counties shifted by one slot (Kent got Montgomery's people), which put wrong 1940 income on about six metros; state-level checks couldn't see it. Results barely moved after the fix (metro Chow 1950 p from 0.009 to 0.011; same break years).
+- **Open:** counties split across a 2023 CBSA line (see `geography.md`); the user asked for more detail before deciding.
+- **Decided by:** user (missing-wage variant, 2026-10-14); Claude (the other fixes, from the review).
 
 ## Open items
 - Plan 1 (scaffolding and RQ0b) is code-complete on branch `plan-1-rq0b` (Tasks 1–12). Next: the whole-branch review, then Plan 2 (RQ0a, city-proper).

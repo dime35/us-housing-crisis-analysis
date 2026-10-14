@@ -4,8 +4,9 @@ How places are defined and matched across sources. Update this file whenever a c
 
 ## Primary unit: metro with constant boundaries
 
-- US metros use the **2023 CBSA delineation**, built from counties. The same county set is used for every year back to 1900, so growth reflects people, not boundary changes.
-- County boundary changes over time are handled with NHGIS standardized or time-consistent tables where available. Any remaining manual fixes are listed below.
+- US metros use the **2023 CBSA delineation**, built from counties. The same list of counties is used for every year back to 1900.
+- **County populations are NHGIS A00 "nominally integrated" counts**, not boundary-standardized ones: a county is linked across years by name and code, and its historical count covers whatever area it had then. Renames, mergers and territory counties are mapped to successors (manual fixes below). This removes most boundary effects but not all.
+- **Known limitation: counties split across a 2023 CBSA line.** When a county created after 1900 was carved from a parent in a different CBSA (or outside any CBSA), the parent's earlier counts include the area that later left. Growth for the affected metros is distorted in the decade of the split. Examples: Broomfield CO (2001, from Boulder, Adams, Jefferson and Weld; it is in the Denver CBSA, so Boulder's 2000→2010 growth shows +1.1% instead of roughly +9%); La Paz AZ (1983, from Yuma); Cibola NM (1981, from Valencia, in the Albuquerque CBSA). Found in the Plan 1 review (2026-10-14); how to handle these is an open item.
 
 ## Secondary unit: city proper
 

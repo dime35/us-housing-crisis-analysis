@@ -62,13 +62,14 @@ def test_unmatched_county_population_is_small(interim):
     # the affected Oklahoma metro-years instead (features.INCOMPLETE_STATE_YEARS)
     r = r[~r.county_id.str.startswith("nhgis-G178")]
     by_year = r[r.year >= 1900].groupby("year").share_of_us.sum()
-    assert (by_year <= 0.005).all(), r.groupby("year").head(5)
+    assert (by_year <= 0.002).all(), r.groupby("year").head(5)  # D-24: at most 0.14% per decade
 
 
 def test_metro_growth_is_plausible(processed):
     p = processed("us_metro_longrun").sort_values(["geo_id", "year"])
     assert (p.population > 0).all()
-    ratio = p.groupby("geo_id").population.shift(-1) / p.population
+    nxt = p.groupby("geo_id")[["year", "population"]].shift(-1)
+    ratio = (nxt.population / p.population).where(nxt.year == p.year + 10)  # no ratios across gaps
     flagged = p.assign(ratio=ratio)[(ratio < 0.5) | (ratio > 3.0)]
     allow = pd.read_csv(CROSSWALKS_DIR / "growth_allowlist.csv", dtype={"year": "int64"})
     flagged = flagged.merge(allow, on=["geo_id", "year"], how="left", indicator=True)
@@ -94,3 +95,18 @@ def test_ipums_1940_wages_track_bea_1940_income(interim):
     both = pd.concat([np.log(wages_pc), np.log(b)], axis=1, join="inner").dropna()
     assert len(both) >= 45
     assert both.corr().iloc[0, 1] > 0.85
+
+
+def test_ipums_1940_persons_match_nhgis_county_population(interim):
+    # A county-code mapping error moves people between counties without changing state totals,
+    # so check every county. Non-mapping gaps (enumeration revisions) are at most ~6%.
+    ip = interim("ipums")
+    ip = ip[ip.variable == "persons_ipums"].set_index("geo_id").value
+    n = interim("nhgis")
+    n = n[(n.geo_level == "county") & (n.year == 1940) & (n.variable == "population")].set_index("geo_id").value
+    both = pd.concat([ip.rename("ipums"), n.rename("nhgis")], axis=1, join="inner")
+    gap = (both.ipums - both.nhgis).abs()
+    bad = both[gap > np.maximum(0.07 * both.nhgis, 100)]
+    assert bad.empty, bad
+    missing = n[(n > 1000) & ~n.index.isin(ip.index) & ~n.index.str.startswith("county:nhgis-")]
+    assert missing.empty, missing

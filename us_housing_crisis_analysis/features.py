@@ -25,16 +25,21 @@ def _pick(df: pd.DataFrame, variable: str, years, level: str | None = None) -> p
     return df[m]
 
 
-def _assemble(pop: pd.DataFrame, income: pd.DataFrame) -> pd.DataFrame:
+def _assemble(pop: pd.DataFrame, income: pd.DataFrame, columns: list[str] = PANEL_COLUMNS) -> pd.DataFrame:
     """Left join income onto population, so missing income stays NaN (never 0)."""
     out = pop.merge(income, on=["geo_id", "year"], how="left")
-    return out[PANEL_COLUMNS].sort_values(["geo_id", "year"]).reset_index(drop=True)
+    return out[columns].sort_values(["geo_id", "year"]).reset_index(drop=True)
+
+
+# NHGIS 1900 "Persons in the Military" abroad: not a place, so not a panel unit
+MILITARY_GEO_ID = "state:nhgis-G999"
 
 
 def map_territories(pop: pd.DataFrame) -> pd.DataFrame:
     """Give NHGIS territory rows (state:nhgis-G...) their later state's ID where the boundary
     already matched, from territory_to_state.csv, and sum (Oklahoma 1900 = two territories)."""
     t = pd.read_csv(CROSSWALKS_DIR / "territory_to_state.csv", dtype={"state_fips": str})
+    pop = pop[pop.geo_id != MILITARY_GEO_ID]
     code = pop.geo_id.str.removeprefix("state:nhgis-")
     m = pop.assign(nhgis_code=code).merge(t[["nhgis_code", "state_fips", "from_year"]], on="nhgis_code", how="left")
     mapped = m.state_fips.notna() & (m.year >= m.from_year)
@@ -112,6 +117,14 @@ def build_us_metro_longrun(
     wages = to_cbsa(county_series(ipums, "wage_income_total", [1940])).groupby("cbsa_code")["value"].sum()
     persons = to_cbsa(county_series(ipums, "persons_ipums", [1940])).groupby("cbsa_code")["value"].sum()
     inc1940 = (wages / persons).rename("income_pc").reset_index().assign(year=1940, income_source="ipums_1940_wages")
+    # Robustness variant: people with a missing wage (999998) left out of the denominator instead
+    # of counted as earning 0. Missing counts are built per county (share x persons) before summing.
+    miss = _counties(ipums, "wage_missing_share", [1940]).merge(
+        _counties(ipums, "persons_ipums", [1940]), on=["county_fips", "year"], suffixes=("_share", "_persons"))
+    miss = _drop_unplaced(harmonize_county_fips(miss.assign(value=miss.value_share * miss.value_persons)))
+    missing = to_cbsa(miss[["county_fips", "year", "value"]]).groupby("cbsa_code")["value"].sum()
+    reported = persons.sub(missing, fill_value=0)
+    inc1940 = inc1940.merge((wages / reported).rename("income_pc_wages_reported").reset_index(), on="cbsa_code")
 
     # 1950-1960: county medians cannot be summed; use the population-weighted mean (approximation).
     # Weight at the original county code, before harmonizing, so merged counties average
@@ -131,8 +144,11 @@ def build_us_metro_longrun(
     inc_bea = (pi / bpop).rename("income_pc").reset_index().assign(income_source="bea")
 
     income = pd.concat([inc1940, inc5060, inc_bea], ignore_index=True)
-    income = income.assign(geo_id="cbsa:" + income.cbsa_code)[["geo_id", "year", "income_pc", "income_source"]]
-    return _assemble(pop, income)
+    # The variant differs from income_pc only in 1940
+    income["income_pc_wages_reported"] = income.income_pc_wages_reported.fillna(income.income_pc)
+    income = income.assign(geo_id="cbsa:" + income.cbsa_code)[
+        ["geo_id", "year", "income_pc", "income_source", "income_pc_wages_reported"]]
+    return _assemble(pop, income, PANEL_COLUMNS + ["income_pc_wages_reported"])
 
 
 def unmatched_county_report(nhgis: pd.DataFrame) -> pd.DataFrame:

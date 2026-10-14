@@ -84,7 +84,8 @@ def break_search(dp: pd.DataFrame, max_breaks: int = 3, min_segment: int = 2) ->
                 continue
             X = _design(dp, combo)
             ssr = sm.OLS(dp.growth, X).fit().ssr
-            bic[tuple(int(c) for c in combo)] = n * np.log(ssr / n) + X.shape[1] * np.log(n)
+            # parameters = coefficients plus the break dates themselves (Yao 1988)
+            bic[tuple(int(c) for c in combo)] = n * np.log(ssr / n) + (X.shape[1] + len(combo)) * np.log(n)
     return BreakSearch(breaks=min(bic, key=bic.get), bic=bic)
 
 

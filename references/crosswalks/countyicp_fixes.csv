@@ -1,0 +1,25 @@
+statefip,countyicp,county_fips,name,evidence
+24,70,009,Calvert County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,90,011,Caroline County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,110,013,Carroll County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,130,015,Cecil County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,150,017,Charles County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,170,019,Dorchester County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,190,021,Frederick County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,210,023,Garrett County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,230,025,Harford County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,250,027,Howard County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,270,029,Kent County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,290,031,Montgomery County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,310,033,Prince George's County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,330,035,Queen Anne's County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,350,039,Somerset County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,390,041,Talbot County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,410,043,Washington County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,430,045,Wicomico County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+24,450,047,Worcester County MD,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+29,1930,186,Ste. Genevieve County MO,ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+51,1875,189,Warwick County VA (merged into Newport News; see county_fixes.csv),ICPSR 2896 County Data Books 1952/1962 (ICPSR county code next to FIPS)
+32,510,025,Ormsby County NV (code 510 = later Carson City),"IPUMS 1940 persons vs NHGIS 1940 county population (3,208 vs 3,209)"
+32,250,027,Pershing County NV,"IPUMS 1940 persons vs NHGIS 1940 county population (2,721 vs 2,713)"
+41,605,061,Union County OR (a trailing 5 here does not mean a dissolved county),"IPUMS 1940 persons vs NHGIS 1940 county population (17,435 vs 17,399)"

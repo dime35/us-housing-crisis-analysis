@@ -31,7 +31,8 @@ def test_state_panel_maps_territories_to_their_later_states():
                   ("state:nhgis-G405", "state", 1890, "population", 62_000),   # Oklahoma Territory
                   ("state:nhgis-G405", "state", 1900, "population", 398_331),
                   ("state:nhgis-G178", "state", 1900, "population", 392_060),  # Indian Territory
-                  ("state:nhgis-G095", "state", 1880, "population", 135_000)], "nhgis")  # Dakota: split
+                  ("state:nhgis-G095", "state", 1880, "population", 135_000),  # Dakota: split
+                  ("state:nhgis-G999", "state", 1900, "population", 91_219)], "nhgis")  # military abroad
     manual = long([("state:49", "state", 1880, "income_pc_klein", 135),
                    ("state:40", "state", 1900, "income_pc_klein", 94)], "manual")
     p = features.build_us_state_longrun(nhgis, long([], "bea"), manual).set_index(["geo_id", "year"])
@@ -39,7 +40,7 @@ def test_state_panel_maps_territories_to_their_later_states():
     assert p.loc[("state:40", 1900), "population"] == 790_391  # both territories = the 1907 state
     assert ("state:nhgis-G405", 1890) in p.index  # 1890 Indian Territory uncounted: not mapped
     assert ("state:nhgis-G095", 1880) in p.index  # Dakota split into two states: not mapped
-    assert not p.index.get_level_values("geo_id").isin(["state:nhgis-G495", "state:nhgis-G178"]).any()
+    assert not p.index.get_level_values("geo_id").isin(["state:nhgis-G495", "state:nhgis-G178", "state:nhgis-G999"]).any()
 
 
 def test_metro_panel_sums_counties_and_weights_medians():
@@ -87,3 +88,20 @@ def test_metro_years_with_uncounted_indian_territory_are_dropped():
     empty = long([], "x")
     p = features.build_us_metro_longrun(nhgis, empty, empty, empty, crosswalk)
     assert list(p.year) == [1910]
+
+
+def test_metro_1940_income_variant_leaves_out_missing_wages():
+    crosswalk = pd.DataFrame({"county_fips": ["24510", "24005"], "cbsa_code": ["12580"] * 2,
+                              "cbsa_title": ["Baltimore"] * 2, "area_type": ["metro"] * 2})
+    nhgis = long([("county:24510", "county", 1940, "population", 800),
+                  ("county:24005", "county", 1940, "population", 200)], "nhgis")
+    ipums = long([("county:24510", "county", 1940, "wage_income_total", 400_000),
+                  ("county:24510", "county", 1940, "persons_ipums", 800),
+                  ("county:24510", "county", 1940, "wage_missing_share", 0.25),  # 200 missing
+                  ("county:24005", "county", 1940, "wage_income_total", 100_000),
+                  ("county:24005", "county", 1940, "persons_ipums", 200),
+                  ("county:24005", "county", 1940, "wage_missing_share", 0.0)], "ipums")
+    empty = long([], "x")
+    p = features.build_us_metro_longrun(nhgis, ipums, empty, empty, crosswalk).set_index(["geo_id", "year"])
+    assert p.loc[("cbsa:12580", 1940), "income_pc"] == 500  # missing wages count as 0
+    assert p.loc[("cbsa:12580", 1940), "income_pc_wages_reported"] == 625  # 500,000 / 800 reported

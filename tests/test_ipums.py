@@ -42,3 +42,20 @@ def test_nhgis_code_built_from_statefip_and_countyicp():
     out = ipums.with_nhgis_code(raw)
     assert out.COUNTYNHG.tolist() == [2405100, 4600015]
     assert set(ipums.to_long(ipums.aggregate_wages([out])).geo_id) == {"county:24510", "county:nhgis-4600015"}
+
+
+def test_countyicp_fixes_override_the_fips_rule():
+    # Maryland's ICPSR codes skip FIPS 007 (Calvert is 70, FIPS 009); Pershing NV is 250 (FIPS 027);
+    # Union OR is 605 (FIPS 061), which the rule would read as a dissolved county
+    raw = pd.DataFrame({"STATEFIP": [24, 24, 32, 41, 24], "COUNTYICP": [70, 310, 250, 605, 50],
+                        "INCWAGE": [1, 1, 1, 1, 1]})
+    out = ipums.with_nhgis_code(raw)
+    assert out.COUNTYNHG.tolist() == [2400090, 2400330, 3200270, 4100610, 2400050]
+
+
+def test_countyicp_fixes_file_is_consistent():
+    fixes = ipums.load_countyicp_fixes()
+    assert not fixes.duplicated(["statefip", "countyicp"]).any()
+    assert fixes.county_fips.str.fullmatch(r"\d{3}").all()
+    # an override that equals the rule would be pointless
+    assert (fixes.countyicp // 10 != fixes.county_fips.astype(int)).all()

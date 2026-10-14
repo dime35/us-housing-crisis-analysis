@@ -56,3 +56,20 @@ def test_error_payload_is_not_cached(tmp_path, monkeypatch):
     with pytest.raises(bea.BeaApiError):
         bea.download()
     assert not list(tmp_path.glob("*.json"))
+
+
+def test_saved_payload_drops_the_request_and_its_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("BEA_API_KEY", "secret-key")
+    monkeypatch.setattr(bea, "RAW_DIR", tmp_path)
+
+    def fake_download(url, dest, **kwargs):
+        dest.write_text(json.dumps({"BEAAPI": {
+            "Request": {"RequestParam": [{"ParameterName": "USERID", "ParameterValue": "secret-key"}]},
+            "Results": {"Data": []}}}))
+        return dest
+
+    monkeypatch.setattr(bea, "download_file", fake_download)
+    for path in bea.download():
+        text = path.read_text()
+        assert "secret-key" not in text and "Request" not in text
+        assert "Results" in json.loads(text)["BEAAPI"]
