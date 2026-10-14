@@ -26,3 +26,6 @@ Answer (spec partner):
 2. Energy-state rule: objective (1980 mining share ≥ 3× national) vs. hand-picked list.
 3. Where results go: new section in notebook 1.1 vs. a separate notebook.
 4. (From the discussion above) metro trimming: 15% main + 5% check.
+
+## Note for the spec (from the Plan 1 review, 2026-10-14)
+- County splits across metro lines are now flagged in the metro panel (`growth_comparable`, D-27). The annual metro panel in Plan 1b should drop the affected unit-years the same way (the split year itself: Broomfield 2001, La Paz 1983, Cibola 1981; Los Alamos 1949 and Menominee 1961 fall before 1969). To be added to spec §3 when it is next edited.

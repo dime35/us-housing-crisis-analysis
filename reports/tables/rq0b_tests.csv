@@ -8,15 +8,15 @@ states,standardized income,break_search_bic,-2652.4223997197896,,1970
 states,drop source-change decades,chow_1950,0.02472642781154532,0.8750506674836471,
 states,drop source-change decades,chow_1980,3.4496251852090274,0.06326611516257466,
 states,drop source-change decades,break_search_bic,-2235.164567385574,,
-metros,main,chow_1950,6.494285033717633,0.010822180965282048,
-metros,main,chow_1980,3.290953947253894,0.06966253788025525,
-metros,main,break_search_bic,-12019.818893544894,,1970
-metros,standardized income,chow_1950,8.198035162986518,0.004193577988839647,
-metros,standardized income,chow_1980,1.9846108237697342,0.15890550762539968,
-metros,standardized income,break_search_bic,-12015.31561715026,,1970
-metros,drop source-change decades,chow_1950,5.020230330699162,0.025052836293460137,
-metros,drop source-change decades,chow_1980,6.032094751007513,0.014048052288053142,
-metros,drop source-change decades,break_search_bic,-9605.628245975431,,1990
-metros,1940 missing wages excluded,chow_1950,5.998350426392093,0.014319260763244308,
-metros,1940 missing wages excluded,chow_1980,3.0766145377689122,0.0794256941880396,
-metros,1940 missing wages excluded,break_search_bic,-12018.111194172001,,1970
+metros,main,chow_1950,6.524426623520929,0.010640284516597905,
+metros,main,chow_1980,3.228303662548603,0.07237562228411765,
+metros,main,break_search_bic,-11988.498553357136,,1970
+metros,standardized income,chow_1950,8.288732369440213,0.003989182615714842,
+metros,standardized income,chow_1980,1.963585820588803,0.16113034006175955,
+metros,standardized income,break_search_bic,-11983.917357835364,,1970
+metros,drop source-change decades,chow_1950,5.008613714068074,0.025221496373287074,
+metros,drop source-change decades,chow_1980,5.962853194677078,0.014610378730222709,
+metros,drop source-change decades,break_search_bic,-9574.739027404292,,1990
+metros,1940 missing wages excluded,chow_1950,6.029882134838662,0.0140656724311113,
+metros,1940 missing wages excluded,chow_1980,3.017170521850867,0.08238709354628584,
+metros,1940 missing wages excluded,break_search_bic,-11986.78479184213,,1970

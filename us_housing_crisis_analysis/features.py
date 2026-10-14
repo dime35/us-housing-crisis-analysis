@@ -31,6 +31,26 @@ def _assemble(pop: pd.DataFrame, income: pd.DataFrame, columns: list[str] = PANE
     return out[columns].sort_values(["geo_id", "year"]).reset_index(drop=True)
 
 
+# Counties created by splitting others (new county, parent, year); see geography.md
+COUNTY_SPLITS_PATH = CROSSWALKS_DIR / "county_splits.csv"
+METRO_COLUMNS = PANEL_COLUMNS + ["income_pc_wages_reported", "growth_comparable"]
+
+
+def split_decades(cw: pd.DataFrame) -> set[tuple[str, int]]:
+    """(cbsa_code, decade start) pairs whose growth to the next decade compares different areas:
+    a county split off from a parent, and the two pieces are in different metros (or one is in
+    none). Both metros are flagged for the decade containing the split."""
+    splits = pd.read_csv(COUNTY_SPLITS_PATH, dtype={"new_fips": str, "parent_fips": str})
+    cbsa = cw.set_index("county_fips").cbsa_code
+    flagged = set()
+    for s in splits.itertuples():
+        new_area, parent_area = cbsa.get(s.new_fips), cbsa.get(s.parent_fips)  # None = no metro
+        if new_area != parent_area:
+            decade = s.split_year // 10 * 10  # the split falls between this census and the next
+            flagged |= {(a, decade) for a in (new_area, parent_area) if a is not None}
+    return flagged
+
+
 # NHGIS 1900 "Persons in the Military" abroad: not a place, so not a panel unit
 MILITARY_GEO_ID = "state:nhgis-G999"
 
@@ -148,7 +168,11 @@ def build_us_metro_longrun(
     income["income_pc_wages_reported"] = income.income_pc_wages_reported.fillna(income.income_pc)
     income = income.assign(geo_id="cbsa:" + income.cbsa_code)[
         ["geo_id", "year", "income_pc", "income_source", "income_pc_wages_reported"]]
-    return _assemble(pop, income, PANEL_COLUMNS + ["income_pc_wages_reported"])
+    flagged = split_decades(cw)
+    income_and_flags = income.merge(pop[["geo_id", "year"]], on=["geo_id", "year"], how="right")
+    income_and_flags["growth_comparable"] = [
+        (g.removeprefix("cbsa:"), y) not in flagged for g, y in zip(income_and_flags.geo_id, income_and_flags.year)]
+    return _assemble(pop, income_and_flags, METRO_COLUMNS)
 
 
 def unmatched_county_report(nhgis: pd.DataFrame) -> pd.DataFrame:

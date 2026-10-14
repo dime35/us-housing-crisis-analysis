@@ -192,11 +192,17 @@ These were made by Claude while drafting the spec and haven't been explicitly co
   - **BEA raw files:** the echoed request, which contains the API key, is removed before saving.
   - **Smaller items:** 1900 "Persons in the Military" dropped from the state panel; the unmatched-population test tightened to 0.2%; the growth plausibility test no longer compares across missing decades; spec corrected (risk table; income is measured at the start of decade d); `geography.md` no longer claims boundary-standardized counts.
 - **Why:** the review found Maryland's 1940 counties shifted by one slot (Kent got Montgomery's people), which put wrong 1940 income on about six metros; state-level checks couldn't see it. Results barely moved after the fix (metro Chow 1950 p from 0.009 to 0.011; same break years).
-- **Open:** counties split across a 2023 CBSA line (see `geography.md`); the user asked for more detail before deciding.
+- **Open:** counties split across a 2023 CBSA line; resolved for 1940+ in D-27.
 - **Decided by:** user (missing-wage variant, 2026-10-14); Claude (the other fixes, from the review).
 
+### D-27 · County splits across metro lines: drop the decade, don't reallocate
+- **Decision:** for each county split where the new county and its parent end up in different metros (or one in none), the growth of every metro holding either piece is dropped for the decade containing the split (`county_splits.csv`, `growth_comparable`). Done now for 1940 onward (5 splits, 8 metro-decades); the 1900–1930 splits are done in Plan 2 from the Newberry Library atlas, since RQ0a uses those decades.
+- **Why:** the parent's earlier count includes area that later left, so that decade's growth compares different areas (Boulder 2000–2010 shows +1% instead of about +9%). Dropping uses no invented numbers; reallocating would need the pre-split population of the split-off area, which no census reports. Results barely moved (metro Chow 1950 p = 0.011; same break years).
+- **Alternatives:** reallocating pre-split population by the new county's share at its first census; documenting only.
+- **Decided by:** user (approach, 2026-10-14); proposed by Claude.
+
 ## Open items
-- Plan 1 (scaffolding and RQ0b) is code-complete on branch `plan-1-rq0b` (Tasks 1–12). Next: the whole-branch review, then Plan 2 (RQ0a, city-proper).
+- Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27). Open: Plan 1b spec review (annual break dating; discussion log next to the spec), then Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits.
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.

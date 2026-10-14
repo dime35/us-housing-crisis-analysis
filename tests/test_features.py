@@ -105,3 +105,20 @@ def test_metro_1940_income_variant_leaves_out_missing_wages():
     p = features.build_us_metro_longrun(nhgis, ipums, empty, empty, crosswalk).set_index(["geo_id", "year"])
     assert p.loc[("cbsa:12580", 1940), "income_pc"] == 500  # missing wages count as 0
     assert p.loc[("cbsa:12580", 1940), "income_pc_wages_reported"] == 625  # 500,000 / 800 reported
+
+
+def test_metro_decade_with_a_county_split_is_flagged_not_comparable(tmp_path, monkeypatch):
+    # Broomfield (08014) split from Boulder (08013) in 2001: Boulder's and Denver's 2000-2010 growth
+    # compare different areas, so that decade is flagged; other decades are not
+    splits = tmp_path / "county_splits.csv"
+    splits.write_text("new_fips,parent_fips,split_year,note\n08014,08013,2001,x\n")
+    monkeypatch.setattr(features, "COUNTY_SPLITS_PATH", splits)
+    crosswalk = pd.DataFrame({"county_fips": ["08013", "08014", "08031"], "cbsa_code": ["14500", "19740", "19740"],
+                              "cbsa_title": ["Boulder", "Denver", "Denver"], "area_type": ["metro"] * 3})
+    nhgis = long([("county:08013", "county", y, "population", 100) for y in (1990, 2000, 2010)]
+                 + [("county:08031", "county", y, "population", 500) for y in (1990, 2000, 2010)], "nhgis")
+    empty = long([], "x")
+    p = features.build_us_metro_longrun(nhgis, empty, empty, empty, crosswalk).set_index(["geo_id", "year"])
+    assert not p.loc[("cbsa:14500", 2000), "growth_comparable"]
+    assert not p.loc[("cbsa:19740", 2000), "growth_comparable"]
+    assert p.loc[("cbsa:14500", 1990), "growth_comparable"] and p.loc[("cbsa:14500", 2010), "growth_comparable"]

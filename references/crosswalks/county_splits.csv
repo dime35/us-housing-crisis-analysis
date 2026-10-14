@@ -1,0 +1,11 @@
+new_fips,parent_fips,split_year,note
+08014,08001,2001,"Broomfield County created Nov 2001 from parts of Adams, Boulder, Jefferson and Weld (Census Bureau, Substantial Changes to Counties)"
+08014,08013,2001,Broomfield County; see 08001 row
+08014,08059,2001,Broomfield County; see 08001 row
+08014,08123,2001,Broomfield County; see 08001 row
+04012,04027,1983,"La Paz County created Jan 1983 from the northern part of Yuma County (Census Bureau, Substantial Changes to Counties)"
+35006,35061,1981,"Cibola County created June 1981 from the western part of Valencia County (Census Bureau, Substantial Changes to Counties); Valencia fell from 61,115 (1980) to 45,235 (1990)"
+35028,35043,1949,Los Alamos County created 1949 from parts of Sandoval and Santa Fe counties (first in NHGIS in 1950)
+35028,35049,1949,Los Alamos County; see 35043 row
+55078,55115,1961,Menominee County created 1961 from parts of Shawano and Oconto counties (first in NHGIS in 1970)
+55078,55083,1961,Menominee County; see 55115 row

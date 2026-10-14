@@ -28,9 +28,13 @@ class BreakSearch:
 def prepare_decade_panel(panel: pd.DataFrame, start: int, end: int = 2020) -> pd.DataFrame:
     """One row per unit-decade with population at both ends and income at the start. Units
     missing either drop out of that decade only (spec: no interpolation)."""
-    p = panel[["geo_id", "year", "population", "income_pc", "income_source"]]
+    # growth_comparable (metro panel): False where a county split makes the decade's growth
+    # compare different areas; that decade is dropped, the neighboring decades are kept
+    ok = panel["growth_comparable"].astype(bool) if "growth_comparable" in panel else True
+    p = panel[["geo_id", "year", "population", "income_pc", "income_source"]].assign(ok=ok)
     nxt = p[["geo_id", "year", "population"]].assign(year=p.year - 10)
     m = p.merge(nxt.rename(columns={"population": "population_next"}), on=["geo_id", "year"])
+    m = m[m.ok]
     m = m[(m.year >= start) & (m.year + 10 <= end)]
     m = m[(m.population > 0) & (m.population_next > 0) & (m.income_pc > 0)]
     return pd.DataFrame(

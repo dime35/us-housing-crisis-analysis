@@ -75,3 +75,12 @@ def test_source_change_decades():
     dp = pd.DataFrame({"decade": [1900, 1910, 1920, 1930, 1930],
                        "income_source": ["klein", "klein", "easterlin", "bea", "bea"]})
     assert breaks.source_change_decades(dp) == [1920, 1930]
+
+
+def test_prepare_decade_panel_drops_decades_flagged_not_comparable():
+    # rows deliberately out of order, so position and year don't line up
+    panel = pd.DataFrame({"geo_id": ["a"] * 4, "year": [2010, 1990, 1980, 2000],
+                          "population": [130.0, 110.0, 100.0, 120.0], "income_pc": [10.0] * 4,
+                          "income_source": ["s"] * 4, "growth_comparable": [True, False, True, True]})
+    dp = breaks.prepare_decade_panel(panel, start=1980)
+    assert list(dp.decade) == [1980, 2000]  # 1990-2000 compares different areas
