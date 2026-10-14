@@ -37,6 +37,21 @@ RQ0B_METRO_START = 1940
 RQ0B_END = 2020
 METRO_LONGRUN_START = 1900
 
+# ICPSR 2896 county median family income for RQ0b metro income (found in Plan 1, Task 9, Step 2).
+# Files are the zips as downloaded from ICPSR; member is the Stata file inside. fips_col is the
+# 5-digit state+county FIPS (the 1952 statefip/counfip columns are not FIPS codes). Income is
+# median family income in current dollars (1949 and 1959 income, from the 1950 and 1960 censuses).
+ICPSR_INCOME_FILES: dict[int, dict[str, str]] = {
+    1950: {
+        "file": "ICPSR_02896-V3 1952.zip", "member": "ICPSR_02896/DS0072/02896-0072-Data.dta",
+        "fips_col": "fips", "income_col": "var20",
+    },
+    1960: {
+        "file": "ICPSR_02896-V3 1962.zip", "member": "ICPSR_02896/DS0074/02896-0074-Data.dta",
+        "fips_col": "fips", "income_col": "var22",
+    },
+}
+
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135
 try:

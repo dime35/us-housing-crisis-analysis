@@ -153,11 +153,12 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Alternatives:** the 1960 Census supplementary report ranking county incomes (a PDF to transcribe); starting the metro version in 1970.
 - **Decided by:** user (2026-10-11); source proposed by Claude.
 
-### D-22 · Execution corrections to Plan 1 (Tasks 1–8)
+### D-22 · Execution corrections to Plan 1 (Tasks 1–9)
 - Windham County CT maps to Putnam (micropolitan), not Worcester. The 2023 file puts its successor region there.
 - Easterlin's state figures are in Easterlin (1957), Table Y-1, p. 753; the 1960 NBER chapter has regions only. 1919–21 values were transcribed from page photos the user supplied and verified three ways (see `references/manual_data/README.md`).
 - IPUMS 1940 county codes come from `COUNTYICP` (`COUNTYNHG` isn't offered for the full count). The NHGIS code = state FIPS × 100000 + COUNTYICP, as IPUMS documents.
 - API keys are kept out of error output: HTTP errors are re-raised with the bare URL, and CLI tracebacks don't print local variables.
+- ICPSR 2896 (Task 9): `ICPSR_INCOME_FILES` takes `member` (the Stata file inside the downloaded zip) and `fips_col` instead of the plan's `state_col`/`county_col`, because the 1952 `statefip`/`counfip` columns aren't FIPS codes; both years carry a correct 5-digit `fips` column (1952 matches 1962 by name for all 3,102 shared counties).
 - **Decided by:** Claude (execution rulings, recorded in the plan ledger).
 
 ### D-23 · BEA metro income built from counties
@@ -167,7 +168,7 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Decided by:** user (2026-10-14); proposed by Claude.
 
 ## Open items
-- Finish Plan 1 on branch `plan-1-rq0b`. Waiting on: the user's ICPSR download (Task 9). Tasks 1–8 are complete. Then write Plan 2 (RQ0a, city-proper).
+- Finish Plan 1 on branch `plan-1-rq0b`. Tasks 1–9 are complete; next are Tasks 10–12. Then write Plan 2 (RQ0a, city-proper).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.
