@@ -32,11 +32,16 @@ For each decade d, with i a state or a metro:
   - **1950 cross-check (NHGIS NT39, done once 2026-10-14):** NT39 reports median family income (1949, universe: families) only as $500 brackets, so the check is bracket agreement rather than a value match. All 2,986 counties with a bracket in both sources have the ICPSR value inside the NHGIS bracket (100%). The correlation of log ICPSR income with the log bracket midpoint is 0.98, and the median gap to the midpoint is $124 (as expected for $500 brackets). The two sources measure the same concept.
   - **1940 income definition:** wage and salary income (INCWAGE) summed over everyone in the county ÷ all persons in the county. Top-coded values stay at $5,000. Missing wages (999998) count as 0, and the missing share is kept per county as `wage_missing_share` (8.6% of persons nationally; county median 6.1%, max 62%). County codes come from COUNTYICP (D-22). 0.1% of counties (0.02% of persons) are dissolved counties with no FIPS code and stay as `county:nhgis-*`.
 - **Main figure:** β_d by decade for both versions.
-- **Tests:** run on the pooled unit × decade panel, with income interacted with period indicators, because 7–14 β_d values are too few for these tests:
-  - Chow tests at 1950 and 1980;
-  - Bai-Perron multiple-break search over the decade boundaries.
-- **Source changes:** an indicator for each income source. Results are reported with and without the decades where the source changes.
-- **Robustness:** the metro version is compared with the state version, which uses full personal income rather than 1940 wages.
+- **Estimation (`modeling/breaks.py`):** β_d is a separate OLS per decade with HC1 standard errors. A unit drops out of a decade if it lacks population at either end or income at the start; nothing is filled (`prepare_decade_panel`).
+- **Tests:** run on the pooled unit × decade panel, because 7–14 β_d values are too few for break tests on their own. The pooled design has decade fixed effects (α_d) plus one income slope per segment, where a segment is the run of decades between breaks.
+  - **Chow tests at 1950 and 1980:** a Wald test that the slopes before and after the break are equal, with standard errors clustered by unit (robust to heteroskedasticity and serial correlation within a unit).
+  - **Bai-Perron-style global search:** every set of 0–3 breaks at decade boundaries, with at least 2 decades per segment, is fitted, and the set with the lowest BIC is chosen. "No break" is a candidate, so the search can return none.
+  - Synthetic tests check that the code recovers a known slope, finds a planted 1980 break, finds no break when none is planted, and doesn't read an income-source level shift as a break.
+- **Source changes:** no source indicators (D-20). A source changes only between decades, so a source indicator is collinear with the decade fixed effects, which already absorb any level shift in measured income. Source changes fall in 1920 and 1930 (states) and 1950 and 1970 (metros).
+- **Robustness:**
+  - log income standardized within each decade (`standardize_within_decade`), so sources with different spreads (1940 wages vs. later total income) are comparable;
+  - results with the source-change decades dropped (`source_change_decades`);
+  - the metro version compared with the state version, which uses full personal income rather than 1940 wages.
 
 ## RQ0c — Global timing (5-year, 1950–2020)
 
