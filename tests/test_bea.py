@@ -8,7 +8,7 @@ from us_housing_crisis_analysis.sources import bea
 
 def test_states_only_and_values_parsed(fixtures_dir):
     df = validate_long(bea.parse_bea_json(fixtures_dir / "bea/sainc1_state_pcpi.json", "state"))
-    assert set(df.geo_id) == {"state:24"}  # US, regions and suppressed Alaska dropped
+    assert set(df.geo_id) == {"state:24"}  # US, regions, suppressed Alaska and placeholder-0 Hawaii dropped
     assert df.set_index("year").loc[2020, "value"] == 68258.0
 
 

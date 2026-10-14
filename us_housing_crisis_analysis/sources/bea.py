@@ -83,9 +83,10 @@ def parse_bea_json(path: Path, geo_level: str, variable: str = "income_pc", unit
     if geo_level == "state":
         keep = fips.str.endswith("000") & fips.str[:2].between("01", "56")
     else:
-        # 0 is BEA's placeholder for an area that doesn't exist that year (old Alaska divisions,
-        # Broomfield CO before 2001, Connecticut planning regions), never a real value
-        keep = ~fips.str.endswith("000") & ~fips.isin(CT_PLANNING_REGIONS) & (value != 0)
+        keep = ~fips.str.endswith("000") & ~fips.isin(CT_PLANNING_REGIONS)
+    # 0 is BEA's placeholder for an area without data that year (Alaska and Hawaii before 1950,
+    # old Alaska divisions, Broomfield CO before 2001, Connecticut planning regions), never a real value
+    keep = keep & (value != 0)
     df = pd.DataFrame(
         {
             "geo_id": "state:" + fips.str[:2], "geo_name": data.GeoName.str.rstrip(" *"),

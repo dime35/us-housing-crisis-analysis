@@ -3,5 +3,6 @@
   {"Code": "SAINC1-3", "GeoFips": "24000", "GeoName": "Maryland", "TimePeriod": "1929", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "779"},
   {"Code": "SAINC1-3", "GeoFips": "24000", "GeoName": "Maryland", "TimePeriod": "2020", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "68,258"},
   {"Code": "SAINC1-3", "GeoFips": "91000", "GeoName": "New England", "TimePeriod": "1929", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "900"},
-  {"Code": "SAINC1-3", "GeoFips": "02000", "GeoName": "Alaska *", "TimePeriod": "1929", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "(NA)"}
+  {"Code": "SAINC1-3", "GeoFips": "02000", "GeoName": "Alaska *", "TimePeriod": "1929", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "(NA)"},
+  {"Code": "SAINC1-3", "GeoFips": "15000", "GeoName": "Hawaii *", "TimePeriod": "1940", "CL_UNIT": "Dollars", "UNIT_MULT": "0", "DataValue": "0"}
 ]}}}
