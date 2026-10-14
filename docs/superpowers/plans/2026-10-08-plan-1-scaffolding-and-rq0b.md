@@ -52,7 +52,7 @@
 | `us_housing_crisis_analysis/sources/nhgis.py` | State and county population 1790–2020 |
 | `us_housing_crisis_analysis/sources/icpsr.py` | County median family income 1950 and 1960 (ICPSR 2896, manual download) |
 | `us_housing_crisis_analysis/sources/census_pep.py` | 2020 CBSA estimates base and county membership (validation only) |
-| `us_housing_crisis_analysis/sources/bea.py` | State per capita income 1929+; MSA per capita income 1969+ |
+| `us_housing_crisis_analysis/sources/bea.py` | State per capita income 1929+; county personal income and population 1969+ (summed to CBSAs in Task 10) |
 | `us_housing_crisis_analysis/sources/manual.py` | Klein and Easterlin state income tables |
 | `us_housing_crisis_analysis/sources/ipums.py` | 1940 full-count wage income aggregated to counties |
 | `us_housing_crisis_analysis/geography.py` | 2023 delineation, county → CBSA, Connecticut legacy counties, county fixes, NHGIS code → FIPS |
@@ -1859,12 +1859,18 @@ def test_metro_panel_sums_counties_and_weights_medians():
                   ("county:24510", "county", 1940, "persons_ipums", 800),
                   ("county:24005", "county", 1940, "wage_income_total", 100_000),
                   ("county:24005", "county", 1940, "persons_ipums", 200)], "ipums")
-    bea = long([("cbsa:12580", "metro", 1970, "income_pc", 4301)], "bea")
+    nhgis = pd.concat([nhgis, long([("county:24510", "county", 1970, "population", 900),
+                                    ("county:24005", "county", 1970, "population", 100)], "nhgis")])
+    bea = long([("county:24510", "county", 1970, "personal_income", 3_000_000),
+                ("county:24510", "county", 1970, "population_bea", 900),
+                ("county:24005", "county", 1970, "personal_income", 1_000_000),
+                ("county:24005", "county", 1970, "population_bea", 100)], "bea")
     p = features.build_us_metro_longrun(nhgis, ipums, icpsr, bea, crosswalk).set_index(["geo_id", "year"])
     assert p.loc[("cbsa:12580", 1940), "population"] == 1000
     assert p.loc[("cbsa:12580", 1940), "income_pc"] == 500  # 500,000 wages / 1,000 persons
     assert p.loc[("cbsa:12580", 1950), "income_pc"] == 3100  # 0.9*3000 + 0.1*4000
     assert p.loc[("cbsa:12580", 1950), "income_source"] == "census_median_family_income"
+    assert p.loc[("cbsa:12580", 1970), "income_pc"] == 4000  # 4,000,000 / 1,000 (BEA counties summed)
 
 
 def test_unmatched_report_flags_counties_missing_from_2020():
@@ -1961,9 +1967,12 @@ def build_us_metro_longrun(
     med = (med.assign(vw=med.value * med.w).groupby(["cbsa_code", "year"])[["vw", "w"]].sum())
     inc5060 = (med.vw / med.w).rename("income_pc").reset_index().assign(income_source="census_median_family_income")
 
-    inc_bea = _pick(bea, "income_pc", [y for y in years if y >= 1970], "metro")
-    inc_bea = pd.DataFrame({"cbsa_code": inc_bea.geo_id.str.removeprefix("cbsa:"), "year": inc_bea.year,
-                            "income_pc": inc_bea.value, "income_source": "bea"})
+    # 1970+: BEA county personal income / BEA county population, summed over the metro's counties
+    # (BEA's own MSA level fails in the API, D-23; this also keeps every year on the same counties)
+    bea_years = [y for y in years if y >= 1970]
+    pi = to_cbsa(county_series(bea, "personal_income", bea_years)).groupby(["cbsa_code", "year"])["value"].sum()
+    bpop = to_cbsa(county_series(bea, "population_bea", bea_years)).groupby(["cbsa_code", "year"])["value"].sum()
+    inc_bea = (pi / bpop).rename("income_pc").reset_index().assign(income_source="bea")
 
     income = pd.concat([inc1940, inc5060, inc_bea], ignore_index=True)
     income = income.assign(geo_id="cbsa:" + income.cbsa_code)[["geo_id", "year", "income_pc", "income_source"]]

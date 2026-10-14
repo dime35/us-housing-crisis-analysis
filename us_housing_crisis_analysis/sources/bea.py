@@ -1,22 +1,28 @@
-"""BEA Regional API: per capita personal income for states (SAINC1, 1929+) and metros
-(CAINC1 at MSA level, 1969+). BEA publishes MSAs on the current OMB delineation."""
+"""BEA Regional API: per capita personal income for states (SAINC1, 1929+), and county personal
+income and population (CAINC1, 1969+), which features.py sums to 2023 CBSAs like every other
+metro year. (CAINC1 at MSA level returns BEA error 101 "Unknown error".)"""
 
 import json
 from pathlib import Path
 
 import pandas as pd
 
-from us_housing_crisis_analysis.config import BEA_API_KEY_ENV, RAW_DATA_DIR
+from us_housing_crisis_analysis.config import BEA_API_KEY_ENV, CROSSWALKS_DIR, RAW_DATA_DIR
 from us_housing_crisis_analysis.schema import validate_long
 from us_housing_crisis_analysis.sources._http import download_file, require_env
 
 API_URL = "https://apps.bea.gov/api/data"
 RAW_DIR = RAW_DATA_DIR / "bea"
-# file stem -> (table, line code, GeoFips scope, geo_level). Line 3 = per capita personal income.
+# file stem -> (table, line code, GeoFips scope, geo_level, variable, unit).
+# Line 1 = personal income, 2 = population, 3 = per capita personal income.
 REQUESTS = {
-    "sainc1_state_pcpi": ("SAINC1", 3, "STATE", "state"),
-    "cainc1_msa_pcpi": ("CAINC1", 3, "MSA", "metro"),
+    "sainc1_state_pcpi": ("SAINC1", 3, "STATE", "state", "income_pc", "usd_current"),
+    "cainc1_county_pi": ("CAINC1", 1, "COUNTY", "county", "personal_income", "usd_current"),
+    "cainc1_county_pop": ("CAINC1", 2, "COUNTY", "county", "population_bea", "persons"),
 }
+# Connecticut planning regions (09110-09190). The panels use the 8 old counties, which BEA also
+# reports, so the regions are dropped to avoid counting the same people twice.
+CT_PLANNING_REGIONS = {f"091{i}0" for i in range(1, 10)}
 
 
 class BeaApiError(RuntimeError):
@@ -35,7 +41,7 @@ def _results(payload: dict) -> dict:
 def download(force: bool = False) -> list[Path]:
     key = require_env(BEA_API_KEY_ENV)
     paths = []
-    for stem, (table, line, scope, _) in REQUESTS.items():
+    for stem, (table, line, scope, *_) in REQUESTS.items():
         dest = RAW_DIR / f"{stem}.json"
         params = {
             "UserID": key, "method": "GetData", "datasetname": "Regional", "TableName": table,
@@ -53,29 +59,50 @@ def download(force: bool = False) -> list[Path]:
     return paths
 
 
-def parse_bea_json(path: Path, geo_level: str) -> pd.DataFrame:
+def _combine_county_combos(df: pd.DataFrame, fips: pd.Series) -> pd.DataFrame:
+    """BEA folds some Virginia independent cities (and Kalawao HI, Menominee WI) into combo areas
+    with codes like 51901. Each combo is assigned to its main county; every component shares that
+    county's 2023 CBSA (checked in references/crosswalks/bea_county_combos.csv)."""
+    combos = pd.read_csv(CROSSWALKS_DIR / "bea_county_combos.csv", dtype=str)
+    seen = set(zip(fips, df.year))
+    for c in combos.itertuples():
+        for year in {y for f, y in seen if f == c.bea_fips}:
+            overlap = [p for p in c.components.split("+") if (p, year) in seen]
+            if overlap:
+                raise ValueError(f"BEA combo {c.bea_fips} and components {overlap} both reported for {year}")
+    fips = fips.replace(dict(zip(combos.bea_fips, combos.county_fips)))
+    return df.assign(geo_id="county:" + fips)
+
+
+def parse_bea_json(path: Path, geo_level: str, variable: str = "income_pc", unit: str = "usd_current") -> pd.DataFrame:
     data = pd.DataFrame(_results(json.loads(Path(path).read_text()))["Data"])
     fips = data.GeoFips.str.zfill(5)
-    if geo_level == "state":
-        keep = fips.str.endswith("000") & fips.str[:2].between("01", "56")
-        ids = "state:" + fips.str[:2]
-    else:
-        keep = ~fips.str.startswith("009")  # 00998/00999 = US metro and nonmetro portions
-        ids = "cbsa:" + fips
     # "(NA)", "(D)" and similar suppression codes become NaN and are dropped
     value = pd.to_numeric(data.DataValue.str.replace(",", "", regex=False), errors="coerce")
     value = value * 10.0 ** pd.to_numeric(data.UNIT_MULT, errors="coerce").fillna(0)
-    names = data.GeoName.str.replace(r"\s*\(Metropolitan Statistical Area\)", "", regex=True)
+    if geo_level == "state":
+        keep = fips.str.endswith("000") & fips.str[:2].between("01", "56")
+    else:
+        # 0 is BEA's placeholder for an area that doesn't exist that year (old Alaska divisions,
+        # Broomfield CO before 2001, Connecticut planning regions), never a real value
+        keep = ~fips.str.endswith("000") & ~fips.isin(CT_PLANNING_REGIONS) & (value != 0)
     df = pd.DataFrame(
         {
-            "geo_id": ids, "geo_name": names.str.rstrip(" *"), "geo_level": geo_level,
-            "country_iso3": "USA", "year": data.TimePeriod.astype("int64"), "variable": "income_pc",
-            "value": value.astype("float64"), "unit": "usd_current", "source": "bea",
+            "geo_id": "state:" + fips.str[:2], "geo_name": data.GeoName.str.rstrip(" *"),
+            "geo_level": geo_level, "country_iso3": "USA", "year": data.TimePeriod.astype("int64"),
+            "variable": variable, "value": value.astype("float64"), "unit": unit, "source": "bea",
         }
     )
-    return df[keep & value.notna()].reset_index(drop=True)
+    keep = keep & value.notna()
+    df, fips = df[keep], fips[keep]
+    if geo_level == "county":
+        df = _combine_county_combos(df, fips)
+    return df.reset_index(drop=True)
 
 
 def load() -> pd.DataFrame:
-    frames = [parse_bea_json(RAW_DIR / f"{stem}.json", level) for stem, (*_, level) in REQUESTS.items()]
+    frames = [
+        parse_bea_json(RAW_DIR / f"{stem}.json", level, variable, unit)
+        for stem, (*_, level, variable, unit) in REQUESTS.items()
+    ]
     return validate_long(pd.concat(frames, ignore_index=True))

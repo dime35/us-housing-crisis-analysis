@@ -1,0 +1,9 @@
+{"BEAAPI": {"Request": {}, "Results": {"Statistic": "Personal income", "UnitOfMeasure": "Thousands of dollars", "PublicTable": "CAINC1", "Data": [
+  {"Code": "CAINC1-1", "GeoFips": "24510", "GeoName": "Baltimore (Independent City), MD", "TimePeriod": "1970", "CL_UNIT": "Thousands of dollars", "UNIT_MULT": "3", "DataValue": "3,512,000"},
+  {"Code": "CAINC1-1", "GeoFips": "24000", "GeoName": "Maryland", "TimePeriod": "1970", "CL_UNIT": "Thousands of dollars", "UNIT_MULT": "3", "DataValue": "18,000,000"},
+  {"Code": "CAINC1-1", "GeoFips": "51901", "GeoName": "Albemarle + Charlottesville, VA*", "TimePeriod": "1970", "CL_UNIT": "Thousands of dollars", "UNIT_MULT": "3", "DataValue": "300,000"},
+  {"Code": "CAINC1-1", "GeoFips": "09001", "GeoName": "Fairfield, CT", "TimePeriod": "1970", "CL_UNIT": "Thousands of dollars", "UNIT_MULT": "3", "DataValue": "5,000,000"},
+  {"Code": "CAINC1-1", "GeoFips": "09190", "GeoName": "Western Connecticut, CT*", "TimePeriod": "1970", "CL_UNIT": "Thousands of dollars", "UNIT_MULT": "3", "DataValue": "2,000,000"},
+  {"Code": "CAINC1-1", "GeoFips": "08014", "GeoName": "Broomfield, CO*", "TimePeriod": "1970", "CL_UNIT": "Thousands of dollars", "UNIT_MULT": "3", "DataValue": "0"},
+  {"Code": "CAINC1-1", "GeoFips": "02063", "GeoName": "Chugach Census Area, AK*", "TimePeriod": "1970", "CL_UNIT": "Thousands of dollars", "UNIT_MULT": "3", "DataValue": "(NA)"}
+]}}}

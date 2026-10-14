@@ -160,8 +160,14 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - API keys are kept out of error output: HTTP errors are re-raised with the bare URL, and CLI tracebacks don't print local variables.
 - **Decided by:** Claude (execution rulings, recorded in the plan ledger).
 
+### D-23 · BEA metro income built from counties
+- **Decision:** metro income for 1970+ is BEA county personal income (CAINC1 line 1) summed over each 2023 CBSA's counties, ÷ BEA county population (line 2) summed the same way. BEA's MSA-level table isn't used. Combo areas are mapped with `bea_county_combos.csv`, zeros are dropped as placeholders, and Connecticut uses the old counties.
+- **Why:** the API returns error 101 ("Unknown error") for CAINC1 at the MSA level (checked 2026-10-14, after BEA's outage ended). Building from counties also puts 1970+ on the same county sets as 1940–1960. Check: county populations add up to 203.8M (1970) and 331.6M (2020), so nothing is counted twice; 386 of 393 metros have data (missing: 6 in Puerto Rico, which BEA doesn't cover, and Waterbury-Shelton, which has no historical series).
+- **Alternatives:** BEA's MSA table through its interactive download (current delineation, but no API access and Connecticut on planning regions).
+- **Decided by:** user (2026-10-14); proposed by Claude.
+
 ## Open items
-- Finish Plan 1 on branch `plan-1-rq0b`. Waiting on: the BEA API outage (Task 6), the IPUMS 1940 extract (Task 8), and the user's ICPSR download (Task 9). Then write Plan 2 (RQ0a, city-proper).
+- Finish Plan 1 on branch `plan-1-rq0b`. Waiting on: the user's ICPSR download (Task 9). Tasks 1–8 are complete. Then write Plan 2 (RQ0a, city-proper).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.
