@@ -1,0 +1,2 @@
+dataset,geo_id,year,variable,value,rel_tol,note
+us_metro_longrun,cbsa:41860,2020,population,4749008,0.001,"2020 Census count = sum of the 2020 counts for Alameda, Contra Costa, Marin, San Francisco, San Mateo (1682353+1165927+262321+873965+764442); checked 2026-10-14. api.census.gov/data/2020/dec/pl now requires a key; Census estimates base is 4748982"

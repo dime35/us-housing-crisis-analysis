@@ -23,7 +23,7 @@ dashboard.py          →  reports/dashboard/index.html
 | `sources/<name>.py` | One per source. `download(force=False)` fetches raw files; `load()` returns the long format |
 | `geography.py` | Crosswalks between county, CBSA, OECD metro, UN WUP agglomeration, and featured-city IDs |
 | `dataset.py` | Typer CLI that runs download and load for every source |
-| `features.py` | Builds the five processed panels |
+| `features.py` | Builds the processed panels (`us_state_longrun`, `us_metro_longrun` so far) |
 | `modeling/elasticity.py` | Panel regressions (RQ0c, RQ1, RQ2) |
 | `modeling/breaks.py` | Decade-by-decade coefficients and structural break tests (RQ0b) |
 | `modeling/event_study.py` | Auckland difference-in-differences and synthetic control (RQ5) |
@@ -44,6 +44,7 @@ Every source's `load()` returns these columns: `geo_id, geo_name, geo_level, cou
 
 | Panel | Grain | Used by |
 |---|---|---|
+| `us_state_longrun` | state × decade, 1880–2020 (population, income per capita, income source) | RQ0b |
 | `us_metro_longrun` | metro × decade, 1900–2020 | RQ0a, RQ0b, RQ3 |
 | `us_metro_annual` | metro × year, 2000+ | RQ2, RQ4 |
 | `oecd_metro_panel` | metro × year, ~2000–2022 | RQ1, RQ2 |

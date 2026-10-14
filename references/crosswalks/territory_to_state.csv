@@ -1,0 +1,12 @@
+nhgis_code,state_fips,from_year,note
+G025,02,1880,Alaska Territory; boundary = state of Alaska; BEA income from 1929
+G045,04,1880,Arizona Territory; boundary = state since 1866; Klein income 1880-1910
+G155,15,1900,Hawaii Territory; boundary = state of Hawaii; BEA income from 1929
+G165,16,1880,Idaho Territory; boundary = state since 1868; Klein income 1880
+G305,30,1880,Montana Territory; boundary = state since 1873; Klein income 1880
+G355,35,1880,New Mexico Territory; boundary = state since 1863; Klein income 1880-1910
+G405,40,1900,Oklahoma Territory; summed with Indian Territory = 1907 state (Census historical total 790391 for 1900); 1890 left unmapped because Indian Territory has no 1890 count
+G178,40,1900,Indian Territory; see G405
+G495,49,1880,Utah Territory; boundary = state since 1868; Klein income 1880-1890
+G535,53,1880,Washington Territory; boundary = state since 1863; Klein income 1880
+G565,56,1880,Wyoming Territory; boundary = state since 1868; Klein income 1880

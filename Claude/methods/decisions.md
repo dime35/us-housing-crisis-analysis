@@ -167,8 +167,18 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Alternatives:** BEA's MSA table through its interactive download (current delineation, but no API access and Connecticut on planning regions).
 - **Decided by:** user (2026-10-14); proposed by Claude.
 
+### D-24 · Territories, territory counties and Indian Territory in the RQ0b panels (Plan 1 Task 10)
+- **Decision:**
+  - State panel: territory rows take their later state's ID where the boundary already matched (9 territories); Oklahoma 1900 = Oklahoma + Indian Territory; Oklahoma 1890 and Dakota 1880 stay unmapped.
+  - Metro panel: territory counties are matched by name to the later state's counties (150 rows in `county_fixes.csv`, 6 by hand), plus 10 renames and mergers.
+  - Metro-years in Oklahoma 1900 are dropped where a metro county has no count (Indian Territory had no counties), and the unmatched-population test excludes Indian Territory. All other unmatched shares are ≤ 0.14% per decade.
+  - BEA zeros are dropped at the state level too (Alaska and Hawaii report 0 for 1929–1949).
+- **Why:** without the territory mapping, Klein's 1880–1910 income for 7–8 western states had no population to attach to, and the metro build lost 1.9% of 1900 population. Territory county numbers aren't FIPS, so a code rule only works for Arizona and Hawaii; name matching follows NHGIS's own nominal linking. The Indian Territory nations can't be assigned to counties without area weighting, and the 1900 metro rows aren't used by RQ0b (which starts in 1940).
+- **Alternatives:** area-weighting Indian Territory nations onto 1907 counties; leaving territories out of the 1880–1900 state panel; a `nhgis` state-only start year of 1910.
+- **Decided by:** Claude (execution ruling; reported to the user 2026-10-14).
+
 ## Open items
-- Finish Plan 1 on branch `plan-1-rq0b`. Tasks 1–9 are complete; next are Tasks 10–12. Then write Plan 2 (RQ0a, city-proper).
+- Finish Plan 1 on branch `plan-1-rq0b`. Tasks 1–10 are complete; next are Tasks 11–12. Then write Plan 2 (RQ0a, city-proper).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.
