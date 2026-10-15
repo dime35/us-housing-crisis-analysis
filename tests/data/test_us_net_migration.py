@@ -107,8 +107,8 @@ ADJUSTED_BASES = {
     (2000, 2000): [f"P0TTT{a}" for a in range(0, 90, 5)],
     (2000, 2010): [f"F0TTT{a}" for a in range(0, 90, 5)],
 }
-# Rows that are state totals, where a file has them: 8493 and 8697 also give divisions and
-# regions xx000-like codes, so they are told apart by their level field.
+# Rows that are state totals, where a file has them. In 8493 and 8697 division and region rows can
+# also look like xx000 state codes, so the level field tells them apart.
 STATE_LEVEL = {1950: ("LEVELNO", 1), 1960: ("LEVELNO", 1), 1970: ("LEVEL", 2), 2000: None, 2010: None}
 STATES = set(netmig.UGA_STATE_FIPS.values())
 
@@ -144,9 +144,9 @@ def _census(processed, year: int) -> pd.Series:
     return p.set_index("fips").population
 
 
-# The 1960s and 1970s files take their 1970 counts from Bowles, Beale and Lee (1975): 89,330 (0.04%)
-# above the NHGIS count nationally, higher in 42 states. Only Alaska passes 0.5%: 302,419 against
-# 300,382 (+0.68%), so it is held to 1%.
+# The 1960s and 1970s files take their 1970 counts from Bowles, Beale and Lee (1975). They are
+# 89,330 (0.04%) above the NHGIS count nationally and differ in 42 states. Only Alaska is off by
+# more than 0.5% (302,419 against 300,382, +0.68%), so it is held to 1%.
 CENSUS_TOLERANCE = {(1970, "02"): 0.01}
 
 
