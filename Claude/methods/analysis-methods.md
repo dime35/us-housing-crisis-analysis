@@ -99,7 +99,7 @@ Plan 1c (spec `docs/superpowers/specs/2026-10-15-rq0b-1970-vs-1990-design.md`, �
 - **Decade versions (`us_state_net_migration`, 50 states and DC, 1950s–2010s):** the same test, rule and range (decade cells; before = 1950s–60s, middle = 1970s–80s, after = 1990s–2010s) on three outcomes, all divided by the starting population: total growth G = (P(d+10) − P(d)) / P(d), net migration M = NM(d) / P(d), and the residual G − M. The residual is natural increase **plus any change in census coverage between the two counts**, so it is labelled "natural increase + census coverage change" (D-30). Net-migration checks: without the six gateway states for immigrants (CA, NY, NJ, IL, FL, TX; `config.GATEWAY_STATES`); without the energy states (rule list); log income standardized within decade.
 - **Split:** per decade (cross-section OLS, HC1) and per period (the three-period β's), β_G = β_M + β_N exactly; the notebook asserts it. Table `reports/tables/rq0b_growth_split.csv` (`level, label, beta_total, beta_migration, beta_natural`), figure `reports/figures/rq0b_growth_split.png`.
 - **Context, printed in the notebook (descriptive, not part of the rule):** the main versions' β's per decade (annual ×10) and the Wald tests of β_mid = β_pre and β_mid = β_post; Plan 1b's single-break search (`sup_wald_break`) and its resampling votes (`bootstrap_break_year`), re-run with oil-year effects.
-- **Two growth scales:** annual β's are one-year log growth (×10 ≈ ten-year scale); decade β's are ten-year simple percent changes, not log changes, so that G = M + N holds exactly; on the same sample the decade log-growth β's match Plan 1's (1950s 0.28, 1990s −0.08). The share has no units, so both read the same way (D-30).
+- **Two growth scales:** annual β's are one-year log growth (×10 ≈ ten-year scale); decade β's are ten-year simple percent changes, not log changes, so that G = M + N holds exactly. Decade log-growth β's on the same sample were close to Plan 1's (1950s 0.28, 1990s −0.08); this was checked once, not reproduced in a table. The share has no units, so both read the same way (D-30).
 - **Output table:** `reports/tables/rq0b_1970_vs_1990.csv`, one row per version: `analysis, outcome, spec, beta_pre, beta_mid, beta_post, share, share_low, share_high, p_pre_post, answer, detail` (the spec's columns plus `p_pre_post`, the guard). The main row's `detail` says "robust" or lists the annual checks that disagree.
 - **Additivity:** OLS is linear in the outcome, so β for total growth equals β for net migration plus β for the residual (natural increase + census coverage change), decade by decade and period by period (test, and asserted in the notebook).
 
@@ -173,7 +173,7 @@ Assignment rules are defined in `config.py` and recorded here once implemented. 
       - 1973–1986 window: 0.35 (−0.33 to 1.15);
       - within census division: 0.79 (−1.13 to 2.44), with β_post +0.057 on the ten-year scale;
       - without the WWII years: 0.27 (−0.56 to 1.32).
-    - The no-oil row reproduces Plan 1b's split (0.174 → −0.028).
+    - In the no-oil row, β_post equals Plan 1b's −0.028 exactly. β_pre (1929–69) is 0.174, against Plan 1b's 0.165 over 1929–89.
   - **Decade answers (1950s–2010s): "1970" for total growth and for net migration.**
     - **Total growth:** β 0.320 / 0.096 / −0.047; share 0.61 (0.34–1.23).
     - **Net migration:** β 0.291 / 0.065 / −0.058; share 0.65 (0.38–1.08). Mid vs. before: p < 0.001; mid vs. after: p = 0.14.

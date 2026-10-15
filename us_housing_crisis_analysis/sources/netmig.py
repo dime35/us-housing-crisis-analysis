@@ -36,7 +36,8 @@ def download(force: bool = False) -> list[Path]:
         raise MissingManualDownloadError(
             f"missing {missing} in {RAW_DIR}. The ICPSR decades need a free login:\n"
             f"  1. Open {SERIES_URL} and log in.\n"
-            "  2. For each decade, download the county file (delimited or Stata) with its codebook.\n"
+            "  2. For each decade, download the county file (Stata or fixed-width ASCII)"
+            " with its codebook.\n"
             f"  3. Save the zips, unopened, in {RAW_DIR} under the names in config.NETMIG_FILES."
         )
     return paths
