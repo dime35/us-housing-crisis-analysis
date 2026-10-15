@@ -8,7 +8,7 @@ estimated on the demeaned data, and each candidate break is a closed-form fit.""
 
 from dataclasses import dataclass
 from functools import lru_cache
-from itertools import combinations
+from itertools import combinations, pairwise
 
 import numpy as np
 import pandas as pd
@@ -165,7 +165,7 @@ def sup_wald_break(dp: pd.DataFrame, trim: float = 0.15) -> SingleBreak:
     cand = candidate_positions(nt, trim)
     ssr, b1, b2 = _ssr_candidates(*_sums(t, xd, yd, ones, nt), cand)
     wald = [_cluster_wald(t, g, xd, yd, c, s1, s2, nt) for c, s1, s2 in zip(cand, b1, b2)]
-    j = int(np.argmin(ssr))
+    j = int(np.nanargmin(ssr))
     return SingleBreak(
         break_year=int(periods[cand[j]]), at_edge=j == 0, sup_wald=float(max(wald)),
         critical_value=andrews_critical_value(trim), beta_before=float(b1[j]), beta_after=float(b2[j]),
@@ -263,10 +263,10 @@ def demeaned_break_search(dp: pd.DataFrame, max_breaks: int = 3, min_segment: in
     bic: dict[tuple[int, ...], float] = {}
     for k in range(max_breaks + 1):
         for combo in combinations(range(min_segment, nt - min_segment + 1), k):
-            edges = [0, *combo, nt]
-            if min(b - a for a, b in zip(edges[:-1], edges[1:])) < min_segment:
+            segments = list(pairwise([0, *combo, nt]))
+            if min(b - a for a, b in segments) < min_segment:
                 continue
-            ssr = syy.sum() - sum((cxy[b] - cxy[a]) ** 2 / (cxx[b] - cxx[a]) for a, b in zip(edges[:-1], edges[1:]))
+            ssr = syy.sum() - sum((cxy[b] - cxy[a]) ** 2 / (cxx[b] - cxx[a]) for a, b in segments)
             # parameters: year effects + one slope per segment + the break dates (Yao 1988)
             bic[tuple(int(periods[c]) for c in combo)] = n * np.log(ssr / n) + (nt + 2 * k + 1) * np.log(n)
     return breaks.BreakSearch(breaks=min(bic, key=bic.get), bic=bic)
