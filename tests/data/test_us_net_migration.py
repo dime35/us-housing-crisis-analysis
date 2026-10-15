@@ -20,6 +20,20 @@ def test_national_net_migration_is_positive(processed):
     assert (processed("us_state_net_migration").groupby("decade").net_migration.sum() > 0).all()
 
 
+# natural_rate is a residual: census growth minus net migration. If the census at the end of a
+# decade counted more (or less) completely than the one at its start, measured growth includes
+# that coverage change, and since net migration is held fixed it lands in the residual. The
+# Census Bureau's demographic-analysis (DA) net undercount was 5.5M (2.7%) in 1970, 2.8M (1.2%)
+# in 1980 and 4.7M (1.8%) in 1990 (National Academies, Modernizing the U.S. Census, 1995, ch. 2,
+# citing Robinson et al. 1993: https://www.nationalacademies.org/read/4805/chapter/4), and
+# 338,000 (0.12%) in 2000 (revised DA, October 2001:
+# https://www.census.gov/programs-surveys/decennial-census/about/coverage-measurement/da.2000_Demographic_Analysis.html).
+# So coverage improved in 1970-80 (+2.7M, residual too high), worsened in 1980-90 (-1.9M, too
+# low) and improved in 1990-2000 (+4.4M, too high). Those decades are held to that direction
+# and a 25% bound instead of the 5% match (Plan 1c Task 4 report).
+COVERAGE_SHIFT = {1970: +1, 1980: -1, 1990: +1}
+
+
 def test_natural_increase_matches_nchs(processed):
     path = MANUAL_DATA_DIR / "us_natural_increase.csv"
     if not path.exists():
@@ -28,7 +42,12 @@ def test_natural_increase_matches_nchs(processed):
     p = processed("us_state_net_migration")
     ours = (p.natural_rate * p.population).groupby(p.decade).sum()
     for decade, row in ref.iterrows():
-        assert ours[decade] == pytest.approx(row.births - row.deaths, rel=0.05), decade
+        nchs = row.births - row.deaths
+        if decade in COVERAGE_SHIFT:
+            ratio = ours[decade] / nchs
+            assert (ratio - 1) * COVERAGE_SHIFT[decade] > 0 and abs(ratio - 1) < 0.25, (decade, ratio)
+        else:
+            assert ours[decade] == pytest.approx(nchs, rel=0.05), decade
 
 
 def test_2020_population_in_the_apl_file_matches_the_census(processed):

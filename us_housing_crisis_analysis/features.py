@@ -270,8 +270,13 @@ def drop_states(panel: pd.DataFrame, fips: set[str]) -> pd.DataFrame:
 def build_us_state_net_migration(longrun: pd.DataFrame, netmig: pd.DataFrame) -> pd.DataFrame:
     """State x decade (Plan 1c): census population at both ends, income at the start, county net
     migration summed to the state. Rates are simple percent changes of the starting population,
-    so total = migration + natural increase exactly. A state missing net migration for a decade
-    drops out of that decade only."""
+    so total = migration + natural exactly. A state missing net migration for a decade drops out
+    of that decade only.
+
+    natural_rate is the residual (total - migration): natural increase plus any change in census
+    coverage between the two counts. Nationally it is within 5% of NCHS births minus deaths except
+    in the 1970s, 1980s and 1990s (ratios 1.23 / 0.91 / 1.20), when census coverage improved,
+    worsened and improved again."""
     nm = netmig[(netmig.variable == "net_migration") & (netmig.geo_level == "county")]
     nm = (nm.assign(geo_id="state:" + nm.geo_id.str[7:9]).groupby(["geo_id", "year"], as_index=False)["value"].sum()
           .rename(columns={"value": "net_migration"}))
