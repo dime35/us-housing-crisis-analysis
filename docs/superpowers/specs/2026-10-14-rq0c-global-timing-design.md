@@ -1,7 +1,7 @@
 # Design: RQ0c, did other countries see the same change at the same time? (Plan 3)
 
 - **Date:** 2026-10-14
-- **Status:** Draft, awaiting user review
+- **Status:** Approved by the owner, 2026-10-14 (all eight decisions in §8 accepted as recommended)
 - **Extends:** `2026-10-08-housing-growth-mismatch-design.md` (§2 RQ0c, §3 peer groups, §4 sources and panels, §5 RQ0c method, §10 build step 3)
 - **Builds on:** Plan 1 (RQ0b decade results, `modeling/breaks.py`), D-20 (pooled tests, decade fixed effects), D-27 (drop rather than invent). Waits on Plan 1b (`2026-10-14-rq0b-annual-break-dating-design.md`) for one number only, the US break year.
 
