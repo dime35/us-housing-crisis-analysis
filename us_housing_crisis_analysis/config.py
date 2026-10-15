@@ -56,6 +56,15 @@ OIL_YEARS = (1973, 1990)
 OIL_YEARS_SHORT = (1973, 1986)
 GATEWAY_STATES = ("06", "36", "34", "17", "12", "48")
 
+# County net migration by decade (Plan 1c): UW-Madison Applied Population Laboratory series. Keys
+# are the decade start (1950 = 1950-60). Files sit unopened in data/raw/netmig/. The 2010s entry was
+# checked on 2026-10-15; the ICPSR decades were recorded in Plan 1c Task 3 Step 5.
+NETMIG_DECADES = range(1950, 2011, 10)
+NETMIG_FILES: dict[int, dict[str, str]] = {
+    2010: {"file": "NME_1020_data.zip", "member": "NME_1020_data.csv", "fips_col": "fips_str2020",
+           "name_col": "CoName2020", "total_col": "m1tttt"},
+}
+
 # ICPSR 2896 county median family income for RQ0b metro income (found in Plan 1, Task 9, Step 2).
 # Files are the zips as downloaded from ICPSR; member is the Stata file inside. fips_col is the
 # 5-digit state+county FIPS (the 1952 statefip/counfip columns are not FIPS codes). Income is
