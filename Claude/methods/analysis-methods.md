@@ -73,6 +73,7 @@ Plan 1b (spec `docs/superpowers/specs/2026-10-14-rq0b-annual-break-dating-design
   - metros: 5% trimming; without energy states (both lists); standardized income;
   - five-year rolling windows (figure);
   - decade cross-check (data test): each rolling β for a window starting in 1970, 1980, … lies inside the 95% interval of the decade β.
+- **Fixed-effect cells (Plan 1c):** year, year × energy group in 1973–1990 (`oil_cells`), or year × census division (`division_cells`); removed exactly by demeaning within cells, since each cell lies in one year.
 - **Two scales for β:** β_before and β_after measure one-year growth, so they are about a tenth of the ten-year β. They are stored as `beta_before_annual`/`beta_after_annual` and shown ×10 as `beta_before_10y`/`beta_after_10y` next to decade results. In the standardized-income rows, log income is z-scored within year, so the `beta_*` columns there are per standard deviation of log income and are not on the decade scale.
 - **Outputs:** figure `reports/figures/rq0b_annual_betas.png`; tables `reports/tables/rq0b_annual_tests.csv` (columns as in the spec plus `at_edge`, `reported_range`, `sup_wald_cv5` and `multi_breaks`; D-28) and `reports/tables/rq0b_annual_range_coverage.csv`.
 

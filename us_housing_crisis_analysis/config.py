@@ -49,6 +49,13 @@ ENERGY_STATES_HAND = ("48", "40", "22", "56", "02", "35", "54", "38")
 # Growth years left out in the WWII robustness check (troop moves and war industry)
 WWII_GROWTH_YEARS = range(1940, 1947)
 
+# Plan 1c (1970 or 1990?): the two cut years, the oil years (energy states get their own year
+# effects then), and the main immigrant gateway states for the net-migration check.
+RQ0B_CUTS = (1970, 1990)
+OIL_YEARS = (1973, 1990)
+OIL_YEARS_SHORT = (1973, 1986)
+GATEWAY_STATES = ("06", "36", "34", "17", "12", "48")
+
 # ICPSR 2896 county median family income for RQ0b metro income (found in Plan 1, Task 9, Step 2).
 # Files are the zips as downloaded from ICPSR; member is the Stata file inside. fips_col is the
 # 5-digit state+county FIPS (the 1952 statefip/counfip columns are not FIPS codes). Income is

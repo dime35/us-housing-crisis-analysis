@@ -13,6 +13,7 @@ from itertools import combinations, pairwise
 import numpy as np
 import pandas as pd
 
+from us_housing_crisis_analysis.config import OIL_YEARS
 from us_housing_crisis_analysis.modeling import breaks
 
 
@@ -84,6 +85,31 @@ def candidate_positions(n_periods: int, trim: float) -> np.ndarray:
     return np.arange(k, n_periods - k + 1)
 
 
+def _cell_codes(dp: pd.DataFrame, period: str, cell: str | None) -> tuple[np.ndarray, int]:
+    """Each row's fixed-effect cell (the period itself when cell is None) and the number of cells.
+    A cell must lie inside one period, so demeaning within cells keeps the period slopes exact."""
+    col = dp[period] if cell is None else dp[cell]
+    codes, uniques = pd.factorize(col, sort=True)
+    if cell is not None and dp.groupby(cell)[period].nunique().max() > 1:
+        raise ValueError(f"cells in {cell!r} span more than one {period}")
+    return codes, len(uniques)
+
+
+def oil_cells(dp: pd.DataFrame, energy_fips, years: tuple[int, int] = OIL_YEARS, period: str = "year") -> pd.DataFrame:
+    """cell = the period, except energy states during the oil years, which get their own cell (e.g.
+    "1980E"), so the oil boom and bust can't show up as a change in beta."""
+    in_oil = dp.geo_id.str[6:8].isin(set(energy_fips)) & dp[period].between(*years)
+    return dp.assign(cell=dp[period].astype(str) + np.where(in_oil, "E", ""))
+
+
+def division_cells(dp: pd.DataFrame, divisions: pd.Series, period: str = "year") -> pd.DataFrame:
+    """cell = period x census division: states are compared only within their own region."""
+    division = dp.geo_id.str[6:8].map(divisions)
+    if division.isna().any():
+        raise ValueError(f"no division for {sorted(dp.geo_id[division.isna()].unique())}")
+    return dp.assign(cell=dp[period].astype(str) + "-" + division.astype(int).astype(str))
+
+
 def _arrays(dp: pd.DataFrame, period: str = "year"):
     """Sorted periods, each row's period position, unit codes, log income and growth."""
     periods = np.sort(dp[period].unique())
@@ -115,12 +141,12 @@ def _ssr_candidates(sxx, sxy, syy, cand):
         return syy.sum() - bxy**2 / bxx - axy**2 / axx, bxy / bxx, axy / axx
 
 
-def _cluster_wald(t, g, xd, yd, c, b1, b2, n_periods) -> float:
+def _cluster_wald(t, g, xd, yd, c, b1, b2, n_fe) -> float:
     """Wald statistic for slope before = slope after, clustered by unit, with statsmodels'
-    small-sample factor G/(G-1) * (N-1)/(N-K), K counting the period dummies."""
+    small-sample factor G/(G-1) * (N-1)/(N-K), K counting the fixed-effect dummies."""
     before = t < c
     e = yd - np.where(before, b1, b2) * xd
-    n_units, n, k = g.max() + 1, len(t), n_periods + 2
+    n_units, n, k = g.max() + 1, len(t), n_fe + 2
     u1 = np.bincount(g, np.where(before, xd * e, 0.0), n_units)
     u2 = np.bincount(g, np.where(before, 0.0, xd * e), n_units)
     s1, s2 = (xd[before] ** 2).sum(), (xd[~before] ** 2).sum()
@@ -156,15 +182,17 @@ class SingleBreak:
     last_year: int
 
 
-def sup_wald_break(dp: pd.DataFrame, trim: float = 0.15) -> SingleBreak:
+def sup_wald_break(dp: pd.DataFrame, trim: float = 0.15, cell: str | None = None) -> SingleBreak:
     """Break year = lowest SSR over candidates (Bai-Perron); significance = the largest clustered
-    Wald statistic over the same candidates, against Andrews' critical value."""
+    Wald statistic over the same candidates, against Andrews' critical value. cell: an optional
+    fixed-effect column finer than the year (oil_cells, division_cells)."""
     periods, t, g, x, y = _arrays(dp)
+    cc, ncell = _cell_codes(dp, "year", cell)
     nt, ones = len(periods), np.ones(len(t))
-    xd, yd = _demean(t, x, y, ones, nt)
+    xd, yd = _demean(cc, x, y, ones, ncell)
     cand = candidate_positions(nt, trim)
     ssr, b1, b2 = _ssr_candidates(*_sums(t, xd, yd, ones, nt), cand)
-    wald = [_cluster_wald(t, g, xd, yd, c, s1, s2, nt) for c, s1, s2 in zip(cand, b1, b2)]
+    wald = [_cluster_wald(t, g, xd, yd, c, s1, s2, ncell) for c, s1, s2 in zip(cand, b1, b2)]
     j = int(np.nanargmin(ssr))
     return SingleBreak(
         break_year=int(periods[cand[j]]), at_edge=j == 0, sup_wald=float(max(wald)),
@@ -189,25 +217,26 @@ class BreakRange:
     estimates: np.ndarray
 
 
-def _estimate(t, x, y, w, nt, cand) -> int:
-    """Position of the best-fitting break with rows weighted by w."""
-    xd, yd = _demean(t, x, y, w, nt)
+def _estimate(cc, ncell, t, x, y, w, nt, cand) -> int:
+    """Position of the best-fitting break with rows weighted by w (demeaned within cells)."""
+    xd, yd = _demean(cc, x, y, w, ncell)
     ssr, _, _ = _ssr_candidates(*_sums(t, xd, yd, w, nt), cand)
     return int(cand[int(np.nanargmin(ssr))])
 
 
 def bootstrap_break_year(dp: pd.DataFrame, trim: float = 0.15, draws: int = 999,
-                         level: float = 0.90, seed: int = 0) -> BreakRange:
+                         level: float = 0.90, seed: int = 0, cell: str | None = None) -> BreakRange:
     """Resample whole units with replacement (keeping each unit's years together), re-estimate
     the break year each time, and return the middle `level` share of the estimates."""
     periods, t, g, x, y = _arrays(dp)
+    cc, ncell = _cell_codes(dp, "year", cell)
     nt, n_units = len(periods), g.max() + 1
     cand = candidate_positions(nt, trim)
     rng = np.random.default_rng(seed)
     est = np.empty(draws, dtype=int)
     for d in range(draws):
         w = np.bincount(rng.integers(0, n_units, n_units), minlength=n_units)[g].astype(float)
-        est[d] = periods[_estimate(t, x, y, w, nt, cand)]
+        est[d] = periods[_estimate(cc, ncell, t, x, y, w, nt, cand)]
     a = (1 - level) / 2
     return BreakRange(int(np.floor(np.quantile(est, a))), int(np.ceil(np.quantile(est, 1 - a))), est)
 

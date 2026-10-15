@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+import statsmodels.api as sm
 
 from us_housing_crisis_analysis.modeling import annual_breaks as ab
 from us_housing_crisis_analysis.modeling import breaks
@@ -185,3 +186,65 @@ def test_demeaned_search_matches_brute_force_with_year_dummies():
 def test_demeaned_search_finds_planted_break_and_none_when_absent():
     assert ab.demeaned_break_search(simulate(lambda y: 0.03 if y < 1978 else 0.0)).breaks == (1978,)
     assert ab.demeaned_break_search(simulate(lambda y: 0.02)).breaks == ()
+
+
+def state_panel(beta_for, n_units=48, years=range(1929, 2024), noise=0.02, seed=0, oil=False):
+    """Like simulate(), with state-style IDs (state:01 ...) so oil and division cells apply. With
+    oil=True, units 01-08 get an income boom 1973-81 and bust 1982-90, and growth follows oil jobs
+    (+0.03 boom, -0.03 bust) rather than income."""
+    rng = np.random.default_rng(seed)
+    base = rng.normal(0, 0.3, n_units)
+    energy = np.arange(n_units) < 8
+    rows = []
+    for y in years:
+        cycle = (0.3 if 1973 <= y <= 1981 else -0.3 if 1982 <= y <= 1990 else 0.0) if oil else 0.0
+        x = base + rng.normal(0, 0.05, n_units) + energy * cycle
+        g = 0.01 * np.sin(y) + beta_for(y) * x + energy * np.sign(cycle) * 0.03 + rng.normal(0, noise, n_units)
+        rows.append(pd.DataFrame({"geo_id": [f"state:{i + 1:02d}" for i in range(n_units)], "year": y,
+                                  "log_income": x, "growth": g}))
+    return pd.concat(rows, ignore_index=True)
+
+
+ENERGY = {f"{i:02d}" for i in range(1, 9)}
+
+
+def test_oil_cells_split_energy_states_in_oil_years_only():
+    dp = ab.oil_cells(state_panel(lambda y: 0.02, years=range(1970, 1995)), ENERGY)
+    row = dp.set_index(["geo_id", "year"]).cell
+    assert row[("state:01", 1980)] == "1980E" and row[("state:20", 1980)] == "1980"
+    assert row[("state:01", 1972)] == "1972" and row[("state:01", 1991)] == "1991"
+
+
+def test_cells_spanning_two_periods_raise():
+    dp = state_panel(lambda y: 0.02, years=range(1968, 1972)).assign(cell="all")
+    with pytest.raises(ValueError, match="span"):
+        ab.sup_wald_break(dp, cell="cell")
+
+
+def test_sup_wald_with_cells_matches_statsmodels_cell_dummies():
+    dp = ab.oil_cells(state_panel(lambda y: 0.03 if y < 1975 else 0.0, years=range(1960, 2000), oil=True), ENERGY)
+    r = ab.sup_wald_break(dp, cell="cell")
+    X = pd.get_dummies(dp.cell, prefix="c", dtype=float)
+    X["s0"] = dp.log_income * (dp.year < r.break_year)
+    X["s1"] = dp.log_income * (dp.year >= r.break_year)
+    fit = sm.OLS(dp.growth, X).fit(cov_type="cluster", cov_kwds={"groups": pd.factorize(dp.geo_id)[0]})
+    assert r.beta_before == pytest.approx(fit.params["s0"], rel=1e-8)
+    assert r.beta_after == pytest.approx(fit.params["s1"], rel=1e-8)
+
+
+def test_cell_none_unchanged():
+    dp = state_panel(lambda y: 0.03 if y < 1978 else 0.0)
+    a, b = ab.sup_wald_break(dp), ab.sup_wald_break(dp.assign(cell=dp.year), cell="cell")
+    assert (a.break_year, a.sup_wald) == (b.break_year, pytest.approx(b.sup_wald, rel=1e-10))
+
+
+def test_oil_cells_pull_the_break_back_to_1970():
+    dp = state_panel(lambda y: 0.03 if y < 1970 else 0.0, oil=True)
+    with_cells = ab.sup_wald_break(ab.oil_cells(dp, ENERGY), cell="cell")
+    assert abs(with_cells.break_year - 1970) <= 2
+
+
+def test_division_cells():
+    divisions = pd.Series({f"{i:02d}": (i % 9) + 1 for i in range(1, 49)})
+    dp = ab.division_cells(state_panel(lambda y: 0.02, years=range(2000, 2002)), divisions)
+    assert dp.set_index(["geo_id", "year"]).cell[("state:09", 2000)] == "2000-1"

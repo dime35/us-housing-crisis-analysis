@@ -77,6 +77,12 @@ def first_listed_state_fips(cbsa_title: pd.Series) -> pd.Series:
     return cbsa_title.str.extract(r", ([A-Z]{2})", expand=False).map(STATE_ABBR_TO_FIPS)
 
 
+def state_divisions() -> pd.Series:
+    """State FIPS -> census division (1-9), from references/crosswalks/state_divisions.csv."""
+    d = pd.read_csv(CROSSWALKS_DIR / "state_divisions.csv", dtype={"state_fips": str})
+    return d.set_index("state_fips").division
+
+
 def fips_from_nhgis_code(code: str) -> str | None:
     """NHGIS codes are 3-digit state + 4-digit county, each FIPS x 10 for counties that have a
     FIPS code. Historical counties without one use other final digits and return None."""
