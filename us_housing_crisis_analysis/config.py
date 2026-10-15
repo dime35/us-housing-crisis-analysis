@@ -36,6 +36,18 @@ RQ0B_STATE_START = 1880
 RQ0B_METRO_START = 1940
 RQ0B_END = 2020
 METRO_LONGRUN_START = 1900
+# RQ0b annual break dating (Plan 1b): BEA state data from 1929, county data from 1969. Annual
+# growth runs t -> t+1, so the last growth year is RQ0B_ANNUAL_END - 1.
+RQ0B_ANNUAL_STATE_START = 1929
+RQ0B_ANNUAL_METRO_START = 1969
+RQ0B_ANNUAL_END = 2024
+# Energy states (Plan 1b spec §4.3, §8.2): 1980 mining share of earnings >= 3x the national share.
+# The hand-picked list is the robustness check (TX, OK, LA, WY, AK, NM, WV, ND).
+ENERGY_SHARE_YEAR = 1980
+ENERGY_SHARE_MULTIPLE = 3.0
+ENERGY_STATES_HAND = ("48", "40", "22", "56", "02", "35", "54", "38")
+# Growth years left out in the WWII robustness check (troop moves and war industry)
+WWII_GROWTH_YEARS = range(1940, 1947)
 
 # ICPSR 2896 county median family income for RQ0b metro income (found in Plan 1, Task 9, Step 2).
 # Files are the zips as downloaded from ICPSR; member is the Stata file inside. fips_col is the
