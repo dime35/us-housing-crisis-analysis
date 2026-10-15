@@ -197,7 +197,10 @@ Assignment rules are defined in `config.py` and recorded here once implemented. 
       | 2000s | −0.048 | −0.050 |
       | 2010s | −0.012 | −0.034 |
 
-    - The residual's β for the 1970s–90s carries census coverage noise (national ratios to NCHS births − deaths: 1.23, 0.91 and 1.20). The net-migration β doesn't, because migration is measured separately.
+    - The residual's β for the 1970s–90s carries census coverage noise (national ratios to NCHS births − deaths: 1.23, 0.91 and 1.20).
+      - From the 1970s on, net migration is computed on the APL files' undercount-adjusted bases, so coverage change stays out of it and sits in the residual.
+      - The 1950s–60s file uses unadjusted census counts, so there the coverage change sits in net migration. It is small: the national undercount fell about 0.7M in the 1950s and 0.1M in the 1960s. If anything it lowers β_M before 1970, which works against "1970" (D-30).
+      - In the 1980s, a coverage-free natural increase rebuilt from the file's adjusted populations matches NCHS (ratio 1.005). The coverage part of the residual has an income slope of −0.0003, so the 1980s β_N of 0.067 is not coverage (D-30).
   - **Single-break search with oil-year effects:** best year 1989, sup-Wald 18.5 (critical value 8.81). Votes: 1970 37%, 1990 26%, 1989 15%, 1943 7%; Plan 1b without oil effects had 1990 37% and 1970 30%.
   - **Reading:**
     - Annual total growth can't place the change. Decade net migration places it at 1970.

@@ -253,9 +253,20 @@ These were made by Claude while drafting the spec and haven't been explicitly co
     - **What the national check shows:** compared with NCHS births − deaths (`references/manual_data/us_natural_increase.csv`), it is within 5% in the 1950s, 1960s, 2000s and 2010s (ratios 1.011, 1.002, 0.969, 0.979). It is off in the 1970s (1.230), 1980s (0.914) and 1990s (1.204).
     - **Why those three decades:** the demographic-analysis net undercount was 2.7% in 1970, 1.2% in 1980, 1.8% in 1990 and 0.12% in 2000 (NRC 1995; Census Bureau DA 2000; `sources.md`). Sign and size fit.
     - **What the test checks:** the spec wanted 5% in every decade. The data test (`tests/data/test_us_net_migration.py`) keeps 5% for 1950/1960/2000/2010. For 1970/1980/1990 it checks only the documented direction (above 1, below 1, above 1) with |ratio − 1| < 0.25.
-    - **How it is labelled:** "natural increase + census coverage change" in the table, the figure legend and the finding.
-    - **What it affects:** its β for the 1970s–90s carries coverage noise. The net-migration β, which carries the headline split, does not, because migration is measured separately.
-    - **Alternative, not built:** state-level NCHS births and deaths for 1950–2019, a large sourcing job. The owner can ask for it.
+    - **How it is labelled:** "natural increase + census coverage change" in the table, the figure legend, the finding and the paper sentence.
+    - **What it affects:** the residual's β for the 1970s–90s carries coverage noise. Net migration is kept clear of it only from the 1970s on, because the coverage basis of M switches at the 1970 cut (final review):
+      - **1970s–2000s:** the APL files compute net migration on undercount-adjusted bases. Examples: 1980 +2.85M and 1990 +4.38M above the census in the 1980s file; `P00` = 281.76M in the 1990s file. So coverage change stays out of M and sits in the residual.
+      - **1950s–60s:** the file (ICPSR 8493) uses unadjusted census counts (`V19` = 151,325,798, the 1950 count). There the coverage change sits in M, and the residual is close to births minus deaths (ratios 1.011 and 1.002).
+      - **The 1950s–60s part is small.** The national net undercount fell about 0.7M in the 1950s (6.3M to 5.6M) and 0.1M in the 1960s (5.6M to 5.5M; NRC 1995). That is about 0.4% and 0.05% of the population, and the differences between states are smaller still. The undercount was highest in groups concentrated in lower-income states. So, if anything, this lowers β_M before 1970, which works against the "1970" answer.
+    - **Alternative, not built: a coverage-free natural increase from the files already on disk.**
+      - The 1980s file (ICPSR 26761) carries undercount-adjusted populations for 1980 and 1990.
+      - The 1990s file (ICPSR 4171) carries county births and deaths (`BTH`, `DTH`) and adjusted 1990 and 2000 populations.
+      - So natural increase can be rebuilt for the 1980s–90s without coverage change. State-level NCHS births and deaths for 1950–2019 would cover every decade, but that is a larger sourcing job.
+      - **The 1980s check (final review, recomputed):**
+        - The file's adjusted 1990 minus adjusted 1980 minus net migration gives a national natural increase of 16.96M, against NCHS 16.87M: a ratio of 1.005. A data test holds this within 1%.
+        - The coverage part of our residual is N minus that in-file natural increase, per starting population. Its 1980s income slope is −0.0003 (HC1 se 0.005), against β_N = 0.067.
+        - So the 1980s rise in β_N is not coverage.
+      - The owner can ask for either version.
     - *Decided by: Claude (controller ruling, 2026-10-15), flagged to the owner.*
   - **No natural-increase decade is left unsourced.** NCHS births and deaths cover all seven decades (1950–2019). The 1950s figures exclude Alaska and Hawaii (roughly 0.2M of 25M). *Decided by: Claude.*
   - **ICPSR column choices per decade:** in `config.NETMIG_FILES` (study, file member, column), and listed in the net-migration row of `Claude/research/sources.md`:
@@ -284,7 +295,7 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27).
 - Plan 1b (annual break dating) is complete on branch `plan-1b-annual-breaks` (D-28). Finding: annual data confirm the state break but can't pin down the year (about 1990 with all states, about 1970 without the energy states). Next is Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits. RQ0c (global timing) is in design.
 - Plan 1c (1970 or 1990?) is implemented on branch `plan-1c-break-year`, pending the whole-branch review (D-30). Finding: by the preset rule, annual total growth can't tell (share 0.40, range −0.18 to 1.26), and the answer is fragile (standardized income gives 1970). Decade net migration gives 1970 (share 0.65, range 0.38–1.08), robust to its three checks, and accounts for about 95% of the decline. RQ0c's US comparison (Plan 1c spec §9) therefore has no single answer to follow: the owner decides whether it uses the decade net-migration answer (1970) or treats the timing as open.
-- Open for the owner: (a) the natural-increase residual includes census coverage change, so a state vital-statistics version could replace it if the births part matters (D-30); (b) the share range has no coverage simulation (D-30); (c) the annual and decade tests define "before" differently (1929–69 vs. 1950s–60s), which is why their answers differ; any follow-up comparing them on the same window would be a new, post-hoc analysis.
+- Open for the owner: (a) the natural-increase residual includes census coverage change, so a coverage-free version could replace it if the births part matters: from the APL files' own adjusted populations and births and deaths for the 1980s–90s, or from state vital statistics for every decade (D-30); (b) the share range has no coverage simulation (D-30); (c) the annual and decade tests define "before" differently (1929–69 vs. 1950s–60s), which is why their answers differ; any follow-up comparing them on the same window would be a new, post-hoc analysis.
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.
