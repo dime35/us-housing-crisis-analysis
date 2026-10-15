@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from us_housing_crisis_analysis import features, geography
+from us_housing_crisis_analysis.modeling import annual_breaks, breaks
 
 pytestmark = pytest.mark.data
 
@@ -60,3 +61,13 @@ def test_energy_states_1980(interim):
     e = features.energy_states(interim("bea"))
     assert set(e.loc[e.energy, "state_fips"]) == {"56", "54", "40", "35", "22", "21", "48", "02"}
     assert e.set_index("state_fips").loc["38", "ratio"] < 3  # North Dakota: why the hand list also runs
+
+
+@pytest.mark.parametrize("annual, longrun, first", [("us_state_annual", "us_state_longrun", 1930),
+                                                    ("us_metro_annual", "us_metro_longrun", 1970)])
+def test_rolling_beta_matches_decade_beta(processed, annual, longrun, first):
+    roll = annual_breaks.rolling_betas(processed(annual), 10, first, 2020).set_index("start")
+    dec = breaks.decade_betas(breaks.prepare_decade_panel(processed(longrun), first)).set_index("decade")
+    for d in range(first, 2011, 10):
+        lo, hi = dec.beta[d] - 1.96 * dec.se[d], dec.beta[d] + 1.96 * dec.se[d]
+        assert lo <= roll.beta[d] <= hi, (d, roll.beta[d], dec.beta[d], dec.se[d])
