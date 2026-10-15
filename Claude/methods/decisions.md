@@ -225,9 +225,52 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Why:** a design review of Plan 1c (2026-10-15) found these gaps in Plans 1 and 1b. They change no reported numbers, but the earlier write-ups overstated the moving interpretation, and the multi-break BIC searches deserve less weight than they got.
 - **Decided by:** user, 2026-10-15 (proposed by Claude).
 
+### D-30 · Plan 1c judgment calls (1970 or 1990?)
+- **Decision:**
+  - **Scope (option A):** the three-period test on annual state growth with oil-year effects, plus net migration by decade with an exact split of growth. No hand entry of the 1939–1967 birth and death tables (option B), no yearly net migration, no 1940s, no metro version. *Decided by: user, 2026-10-15.*
+  - **Decision rule, fixed before running (spec §4.1):** the 90% unit-bootstrap range of share = (β_pre − β_mid) / (β_pre − β_post) decides between "1970", "1990", "gradual" and "can't tell". If β_pre = β_post isn't rejected at 5%, the answer is "can't tell". The main version sets the answer, and any annual check that disagrees makes it "fragile". The rule was not changed after the results came in. *Decided by: user, 2026-10-15.*
+  - **Oil window:** 1973–1990 in the main version, with 1973–1986 as a check. The energy states are the `features.energy_states` rule list, with the hand list as a check (D-28). *Decided by: user, 2026-10-15.*
+  - **Where the results go:** a new section in notebook 1.1, plus a paragraph in the RQ0b results. *Decided by: user, 2026-10-15.*
+  - **Branch:** `plan-1c-break-year` off `plan-1-rq0b`, in the main project folder. *Decided by: user, 2026-10-15.*
+  - **The share range is not coverage-checked.** It uses the same unit bootstrap as Plan 1b's break-year range (999 draws, seed 0). That range's 80–97% acceptance band and its fallback to Bai's interval (D-28, *decided by: user, 2026-10-14*) were set for a break year. Plan 1c runs no coverage simulation for the share. Like the Plan 1b range, it treats states as independent of one another. *Decided by: Claude.*
+  - **Immigration data test replaced.** The spec (§6) wanted state net migration summed to the US to land within 25% of published net international migration. The test is now "the national sum is positive in every decade". Published net-immigration figures differ from residual-method net migration by up to 2× (undocumented migration, census coverage changes), so a 25% band would test the published figure, not this data. *Decided by: Claude (plan, 2026-10-15).*
+  - **Two growth scales.** The annual test uses one-year log growth (Plan 1b's panel), shown ×10 next to decade results. The decade test uses ten-year simple percent changes, so that total = net migration + residual holds exactly (spec §3). The share has no units, so both read the same way. *Decided by: Claude (plan, 2026-10-15).*
+  - **The residual is "natural increase + census coverage change" (spec deviation, Task 4).** N = G − M includes any change in census coverage between the two counts, not just births minus deaths.
+    - **What the national check shows:** compared with NCHS births − deaths (`references/manual_data/us_natural_increase.csv`), it is within 5% in the 1950s, 1960s, 2000s and 2010s (ratios 1.011, 1.002, 0.969, 0.979). It is off in the 1970s (1.230), 1980s (0.914) and 1990s (1.204).
+    - **Why those three decades:** the demographic-analysis net undercount was 2.7% in 1970, 1.2% in 1980, 1.8% in 1990 and 0.12% in 2000 (NRC 1995; Census Bureau DA 2000; `sources.md`). Sign and size fit.
+    - **What the test checks:** the spec wanted 5% in every decade. The data test (`tests/data/test_us_net_migration.py`) keeps 5% for 1950/1960/2000/2010. For 1970/1980/1990 it checks only the documented direction (above 1, below 1, above 1) with |ratio − 1| < 0.25.
+    - **How it is labelled:** "natural increase + census coverage change" in the table, the figure legend and the finding.
+    - **What it affects:** its β for the 1970s–90s carries coverage noise. The net-migration β, which carries the headline split, does not, because migration is measured separately.
+    - **Alternative, not built:** state-level NCHS births and deaths for 1950–2019, a large sourcing job. The owner can ask for it.
+    - *Decided by: Claude (controller ruling, 2026-10-15), flagged to the owner.*
+  - **No natural-increase decade is left unsourced.** NCHS births and deaths cover all seven decades (1950–2019). The 1950s figures exclude Alaska and Hawaii (roughly 0.2M of 25M). *Decided by: Claude.*
+  - **ICPSR column choices per decade:** in `config.NETMIG_FILES` (study, file member, column), and listed in the net-migration row of `Claude/research/sources.md`:
+    - 1950s and 1960s: `V532` (ICPSR 8493);
+    - 1970s: `NMETOTAL` (ICPSR 8697, undercount-adjusted);
+    - 1980s: the sum of 36 age cells (ICPSR 26761);
+    - 1990s: `NMG_TT_T` (ICPSR 4171);
+    - 2000s: the sum of 18 age groups (ICPSR 34638);
+    - 2010s: APL `m1tttt`.
+
+    All totals include the cohorts born during the decade. *Decided by: Claude, checked against each codebook.*
+  - **1980s net migration is the sum of the 36 male/female age cells.** The file's all-ages total loses two digits in its largest counties, so it is corrupted exactly where the weight is. The age-cell sum gives a US total of 6,737,671. *Decided by: Claude.*
+  - **1990s fixed-width positions were inferred from the data.** The ICPSR 4171 codebook lists variable names but no column positions. The positions were inferred from the file and confirmed by four accounting identities that hold across the columns. `NMG_TT_T` is columns 7726–7732. *Decided by: Claude.*
+  - **Pre-1980 county codes are kept as they are.** In the 1950s–60s, and for some units in the 1970s (and 12 merged units in the 1990s), the county part of the code is not FIPS. Only the state part, which is FIPS in every decade, is used, since Plan 1c only sums to states. A future county-level join on those decades would need a crosswalk. *Decided by: Claude.*
+  - **The ICPSR zips keep ICPSR's standard names** (e.g. `ICPSR_08493-V2.zip`) in `data/raw/netmig/`, so the config names what a fresh download produces. *Decided by: Claude.*
+  - **Context printed beyond the brief's table:** the notebook prints the main versions' β's per decade and the Wald tests of β_mid = β_pre and β_mid = β_post, as spec §4.1 asks. The table keeps the planned columns, with `p_pre_post` (the guard) added to the spec's list. *Decided by: Claude.*
+  - **Task order:** the code-only tasks (cells, three-period test, rule) came first, so work could start before the owner's ICPSR download. The spec's component order put the data first. *Decided by: Claude (plan, 2026-10-15).*
+- **Why:** each call either keeps the approved Plan 1c spec or records where the data forced a departure. The methods are in `analysis-methods.md` (RQ0b — 1970 or 1990?), the data in `pipeline.md` and `sources.md`.
+- **Alternatives:**
+  - a coverage simulation for the share range (not in the spec);
+  - state vital statistics instead of the residual;
+  - the files' all-ages total for the 1980s (corrupted);
+  - a county code crosswalk for the 1950s–70s (no current use).
+
 ## Open items
 - Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27).
 - Plan 1b (annual break dating) is complete on branch `plan-1b-annual-breaks` (D-28). Finding: annual data confirm the state break but can't pin down the year (about 1990 with all states, about 1970 without the energy states). Next is Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits. RQ0c (global timing) is in design.
+- Plan 1c (1970 or 1990?) is implemented on branch `plan-1c-break-year`, pending the whole-branch review (D-30). Finding: by the preset rule, annual total growth can't tell (share 0.40, range −0.18 to 1.26), and the answer is fragile (standardized income gives 1970). Decade net migration gives 1970 (share 0.65, range 0.38–1.08), robust to its three checks, and accounts for about 95% of the decline. RQ0c's US comparison (Plan 1c spec §9) therefore has no single answer to follow: the owner decides whether it uses the decade net-migration answer (1970) or treats the timing as open.
+- Open for the owner: (a) the natural-increase residual includes census coverage change, so a state vital-statistics version could replace it if the births part matters (D-30); (b) the share range has no coverage simulation (D-30); (c) the annual and decade tests define "before" differently (1929–69 vs. 1950s–60s), which is why their answers differ; any follow-up comparing them on the same window would be a new, post-hoc analysis.
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.

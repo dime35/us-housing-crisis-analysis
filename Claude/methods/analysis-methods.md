@@ -79,9 +79,9 @@ Plan 1b (spec `docs/superpowers/specs/2026-10-14-rq0b-annual-break-dating-design
 
 ## RQ0b — 1970 or 1990? (Plan 1c)
 
-Plan 1c (spec `docs/superpowers/specs/2026-10-15-rq0b-1970-vs-1990-design.md`, §4; code `three_period`, `share_range`, `decide` in `modeling/annual_breaks.py`). Plan 1b dated one break; the question here is which of two candidate dates the change belongs to, or whether it was gradual. The results come in a later task.
+Plan 1c (spec `docs/superpowers/specs/2026-10-15-rq0b-1970-vs-1990-design.md`, §4; code `three_period`, `share_range`, `decide` in `modeling/annual_breaks.py`). Plan 1b dated one break; the question here is which of two candidate dates the change belongs to, or whether it was gradual. Notebook `1.1-lr-us-structural-break`, section "1970 or 1990? (Plan 1c)"; results in the Results log below.
 
-- **Model (`three_period`):** one-year growth on log income with a separate slope for each of three periods, cuts at 1970 and 1990 (`config.RQ0B_CUTS`): β_pre (growth years to 1969), β_mid (1970–1989), β_post (1990 on). Decade data use the same cuts (1950s–60s, 1970s–80s, 1990s on). Fixed effects for each cell (the year by default) are removed by demeaning within cells, which is exact because each cell lies inside one period. Standard errors are clustered by unit, with statsmodels' small-sample factor G/(G−1)·(N−1)/(N−K), K = cells + 3 slopes; p-values are chi-square(1), as `wald_test(..., use_f=False)` (test against statsmodels with cell dummies).
+- **Model (`three_period`):** growth on log income (one-year log growth for the annual panel; the decade rates below for the decade panel) with a separate slope for each of three periods, cuts at 1970 and 1990 (`config.RQ0B_CUTS`): β_pre (growth years to 1969), β_mid (1970–1989), β_post (1990 on). Decade data use the same cuts (1950s–60s, 1970s–80s, 1990s on). Fixed effects for each cell (the year by default) are removed by demeaning within cells, which is exact because each cell lies inside one period. Standard errors are clustered by unit, with statsmodels' small-sample factor G/(G−1)·(N−1)/(N−K), K = cells + 3 slopes; p-values are chi-square(1), as `wald_test(..., use_f=False)` (test against statsmodels with cell dummies).
 - **Share:** share = (β_pre − β_mid) / (β_pre − β_post). 0 means 1970–89 looks like the period before, 1 means it looks like the period after. The 90% range comes from resampling whole units (`share_range`, 999 draws, seed 0), keeping each unit's years together. Draws where a period has no variation in income give an undefined share and are skipped.
 - **Decision rule (`decide`, fixed before running, never tuned to results):**
 
@@ -94,8 +94,14 @@ Plan 1c (spec `docs/superpowers/specs/2026-10-15-rq0b-1970-vs-1990-design.md`, �
 
   Guard: if β_pre = β_post is not rejected at 5% (clustered Wald), the answer is "can't tell", whatever the range says.
 - **Fragile:** the main version sets the answer. If any robustness version gives a different answer, the finding is reported as "fragile".
-- **Cells:** the main version has year cells only. Robustness versions use year × energy group in 1973–1990 (`oil_cells`; the `features.energy_states` rule, the hand list, and a 1973–1986 window) or year × census division (`division_cells`, the within-region check). Both cell types lie inside one year, so the slopes stay exact.
-- **Additivity:** OLS is linear in the outcome, so β for total growth equals β for net migration plus β for natural increase, period by period (test).
+- **Cells:** the main annual version uses year cells plus year × energy group in 1973–1990 (`oil_cells`, the `features.energy_states` rule list), so the energy states get their own year effects during the oil boom and bust. Checks: year cells only (no oil effects, as in Plan 1b); the hand list; a 1973–1986 window; year × census division throughout (`division_cells`, crosswalk `references/crosswalks/state_divisions.csv`, the within-region check). Every cell lies inside one year, so the slopes stay exact. The decade versions use decade cells.
+- **Annual versions (states 1929–2024, `us_state_annual`):** main (oil-year effects); no oil effects; hand list; 1973–1986 window; within census division; income standardized within year (with oil-year effects); without the WWII growth years 1940–1946 (with oil-year effects). Only these annual checks count toward "fragile".
+- **Decade versions (`us_state_net_migration`, 50 states and DC, 1950s–2010s):** the same test, rule and range (decade cells; before = 1950s–60s, middle = 1970s–80s, after = 1990s–2010s) on three outcomes, all divided by the starting population: total growth G = (P(d+10) − P(d)) / P(d), net migration M = NM(d) / P(d), and the residual G − M. The residual is natural increase **plus any change in census coverage between the two counts**, so it is labelled "natural increase + census coverage change" (D-30). Net-migration checks: without the six gateway states for immigrants (CA, NY, NJ, IL, FL, TX; `config.GATEWAY_STATES`); without the energy states (rule list); log income standardized within decade.
+- **Split:** per decade (cross-section OLS, HC1) and per period (the three-period β's), β_G = β_M + β_N exactly; the notebook asserts it. Table `reports/tables/rq0b_growth_split.csv` (`level, label, beta_total, beta_migration, beta_natural`), figure `reports/figures/rq0b_growth_split.png`.
+- **Context, printed in the notebook (descriptive, not part of the rule):** the main versions' β's per decade (annual ×10) and the Wald tests of β_mid = β_pre and β_mid = β_post; Plan 1b's single-break search (`sup_wald_break`) and its resampling votes (`bootstrap_break_year`), re-run with oil-year effects.
+- **Two growth scales:** annual β's are one-year log growth (×10 ≈ ten-year scale); decade β's are ten-year simple percent changes, not log changes, so that G = M + N holds exactly; on the same sample the decade log-growth β's match Plan 1's (1950s 0.28, 1990s −0.08). The share has no units, so both read the same way (D-30).
+- **Output table:** `reports/tables/rq0b_1970_vs_1990.csv`, one row per version: `analysis, outcome, spec, beta_pre, beta_mid, beta_post, share, share_low, share_high, p_pre_post, answer, detail` (the spec's columns plus `p_pre_post`, the guard). The main row's `detail` says "robust" or lists the annual checks that disagree.
+- **Additivity:** OLS is linear in the outcome, so β for total growth equals β for net migration plus β for the residual (natural increase + census coverage change), decade by decade and period by period (test, and asserted in the notebook).
 
 ## RQ0c — Global timing (5-year, 1950–2020)
 
@@ -157,3 +163,44 @@ Assignment rules are defined in `config.py` and recorded here once implemented. 
   - Metros 1969–2023: no clear single break (sup-Wald 5.5, below 8.81 at 15% and 9.84 at 5%). Best fit 1980 (range 1978–2010; 1975–2010 at 5%), with β going from −0.060 to +0.035, the opposite direction. Without energy states: best fit 2009, sup-Wald 3.0 (rule) and 2.5 (hand list). Standardized: 1980, sup-Wald 5.9. Multi-break search: 1981, 1990, 2007.
   - Coverage: bootstrap 96% (states) and 98% (metros, above the band, so conservative); Bai 55.5% and 78%. Bootstrap ranges are reported. The metro coverage is for the best-fitting split, not a detected break, so the metro range isn't a range for a break year. No estimate is at the edge.
   - Reading: annual data confirm the break for states but can't pin down the year. It is about 1990 with all states and raw income. It is about 1970 without the energy states, and also with income standardized within year even with the energy states included (sup-Wald 41.5, the strongest). From the early 1970s on, neither states nor metros show a single clear break. The 1969–2024 samples are tested from 1977, and from 1971 with 5% trimming (states 4.2 and metros 5.5, both below 9.84): state β rebounds for windows starting around 1980 before falling. The 1940s breaks in the multi-break search fall in the war and early postwar years, and 1955 is a further 1950s shift. The later break in every 1929–2024 state version is about 1970 or about 1990.
+- **RQ0b 1970 or 1990, 2026-10-15 (Plan 1c; same notebook, table `reports/tables/rq0b_1970_vs_1990.csv`, split `reports/tables/rq0b_growth_split.csv`, figure `reports/figures/rq0b_growth_split.png`):**
+  - **Answer (main version, annual total growth with oil-year effects): can't tell, fragile.** Share 0.40, 90% range −0.18 to 1.26. The guard passes: β_pre = β_post is rejected, p < 0.001. On the ten-year scale, β is 0.174 before 1970, 0.093 in 1970–89 and −0.028 from 1990. 1970–89 differs significantly from neither side (Wald p = 0.32 against before, 0.16 against after).
+  - **Robustness (annual):**
+    - **Fragile** because income standardized within year gives "1970": share 0.67 (0.43–1.14).
+    - **Can't tell** in the other five checks:
+      - no oil effects: 0.35 (−0.31 to 1.17);
+      - hand list: 0.46 (−0.14 to 1.30);
+      - 1973–1986 window: 0.35 (−0.33 to 1.15);
+      - within census division: 0.79 (−1.13 to 2.44), with β_post +0.057 on the ten-year scale;
+      - without the WWII years: 0.27 (−0.56 to 1.32).
+    - The no-oil row reproduces Plan 1b's split (0.174 → −0.028).
+  - **Decade answers (1950s–2010s): "1970" for total growth and for net migration.**
+    - **Total growth:** β 0.320 / 0.096 / −0.047; share 0.61 (0.34–1.23).
+    - **Net migration:** β 0.291 / 0.065 / −0.058; share 0.65 (0.38–1.08). Mid vs. before: p < 0.001; mid vs. after: p = 0.14.
+    - **Net-migration checks, all "1970":**
+      - without the gateway states: 0.64 (0.36–1.15);
+      - without the energy states: 0.64 (0.32–1.16);
+      - standardized income: 0.73 (0.55–1.05).
+    - **Natural increase + census coverage change:** β 0.029 / 0.031 / 0.012. The guard fails (p = 0.65), so "can't tell".
+  - **Split:**
+    - Total β falls 0.367 from before to after. Net migration accounts for 0.349 (95%); natural increase + census coverage change accounts for 0.018 (5%).
+    - From before to the middle, total β falls 0.225, of which net migration accounts for 0.226.
+    - Decade β's for total / net migration:
+
+      | Decade | Total | Net migration |
+      |---|---|---|
+      | 1950s | 0.351 | 0.322 |
+      | 1960s | 0.274 | 0.244 |
+      | 1970s | −0.031 | −0.032 |
+      | 1980s | 0.252 | 0.185 |
+      | 1990s | −0.082 | −0.093 |
+      | 2000s | −0.048 | −0.050 |
+      | 2010s | −0.012 | −0.034 |
+
+    - The residual's β for the 1970s–90s carries census coverage noise (national ratios to NCHS births − deaths: 1.23, 0.91 and 1.20). The net-migration β doesn't, because migration is measured separately.
+  - **Single-break search with oil-year effects:** best year 1989, sup-Wald 18.5 (critical value 8.81). Votes: 1970 37%, 1990 26%, 1989 15%, 1943 7%; Plan 1b without oil effects had 1990 37% and 1970 30%.
+  - **Reading:**
+    - Annual total growth can't place the change. Decade net migration places it at 1970.
+    - The two define "before" differently: 1929–69 annually, including the lower-β Depression and war years, against the 1950s–60s by decade.
+    - The middle period isn't one regime. The 1970s look like "after", and in the 1980s net migration followed income again.
+    - Moving accounts for nearly all of the decline in how growth followed income.
