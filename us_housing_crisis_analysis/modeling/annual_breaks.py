@@ -12,8 +12,9 @@ from itertools import combinations, pairwise
 
 import numpy as np
 import pandas as pd
+from scipy.stats import chi2
 
-from us_housing_crisis_analysis.config import OIL_YEARS
+from us_housing_crisis_analysis.config import OIL_YEARS, RQ0B_CUTS
 from us_housing_crisis_analysis.modeling import breaks
 
 
@@ -299,3 +300,92 @@ def demeaned_break_search(dp: pd.DataFrame, max_breaks: int = 3, min_segment: in
             # parameters: year effects + one slope per segment + the break dates (Yao 1988)
             bic[tuple(int(periods[c]) for c in combo)] = n * np.log(ssr / n) + (nt + 2 * k + 1) * np.log(n)
     return breaks.BreakSearch(breaks=min(bic, key=bic.get), bic=bic)
+
+
+@dataclass(frozen=True)
+class ThreePeriod:
+    beta_pre: float  # before cuts[0]
+    beta_mid: float  # cuts[0] .. cuts[1] - 1
+    beta_post: float  # from cuts[1]
+    share: float  # (pre - mid) / (pre - post): 0 = middle looks like before, 1 = like after
+    p_pre_post: float  # the guard: did anything change at all?
+    p_mid_pre: float
+    p_mid_post: float
+    wald_pre_post: float
+    wald_mid_pre: float
+    wald_mid_post: float
+    n_units: int
+    n_obs: int
+
+
+def _segments(dp: pd.DataFrame, period: str, cuts) -> np.ndarray:
+    return np.searchsorted(np.asarray(cuts), dp[period].to_numpy(), side="right")
+
+
+def _three_betas(seg, xd, yd, w):
+    sxx, sxy = np.bincount(seg, w * xd * xd, 3), np.bincount(seg, w * xd * yd, 3)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return sxy / sxx, sxx
+
+
+def _share(b) -> float:
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return float((b[0] - b[1]) / (b[0] - b[2]))
+
+
+def three_period(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: str | None = None) -> ThreePeriod:
+    """Income slope before cuts[0], between the cuts, and from cuts[1], with fixed effects for
+    each cell (the period by default), standard errors clustered by unit, statsmodels'
+    small-sample factor, and chi-square(1) p-values (as wald_test(..., use_f=False))."""
+    cc, ncell = _cell_codes(dp, period, cell)
+    g = pd.factorize(dp.geo_id)[0]
+    x, y = dp.log_income.to_numpy(float), dp.growth.to_numpy(float)
+    ones = np.ones(len(x))
+    xd, yd = _demean(cc, x, y, ones, ncell)
+    seg = _segments(dp, period, cuts)
+    b, sxx = _three_betas(seg, xd, yd, ones)
+    e = yd - b[seg] * xd
+    n_units, n, k = g.max() + 1, len(x), ncell + 3
+    scores = np.column_stack([np.bincount(g, np.where(seg == s, xd * e, 0.0), n_units) for s in range(3)])
+    cov = n_units / (n_units - 1) * (n - 1) / (n - k) * (scores.T @ scores) / np.outer(sxx, sxx)
+
+    def wald(a):
+        a = np.asarray(a, float)
+        stat = float((a @ b) ** 2 / (a @ cov @ a))
+        return stat, float(chi2.sf(stat, 1))
+
+    (w_pp, p_pp), (w_mpre, p_mpre), (w_mpost, p_mpost) = wald([1, 0, -1]), wald([-1, 1, 0]), wald([0, 1, -1])
+    return ThreePeriod(float(b[0]), float(b[1]), float(b[2]), _share(b), p_pp, p_mpre, p_mpost,
+                       w_pp, w_mpre, w_mpost, int(n_units), int(n))
+
+
+def share_range(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: str | None = None,
+                draws: int = 999, level: float = 0.90, seed: int = 0) -> tuple[float, float, np.ndarray]:
+    """Middle `level` range of the share over unit-bootstrap draws (whole units resampled, years
+    kept together). Draws where a period has no x-variation give NaN and are skipped."""
+    cc, ncell = _cell_codes(dp, period, cell)
+    g = pd.factorize(dp.geo_id)[0]
+    n_units = g.max() + 1
+    x, y = dp.log_income.to_numpy(float), dp.growth.to_numpy(float)
+    seg = _segments(dp, period, cuts)
+    rng = np.random.default_rng(seed)
+    shares = np.empty(draws)
+    for d in range(draws):
+        w = np.bincount(rng.integers(0, n_units, n_units), minlength=n_units)[g].astype(float)
+        xd, yd = _demean(cc, x, y, w, ncell)
+        shares[d] = _share(_three_betas(seg, xd, yd, w)[0])
+    a = (1 - level) / 2
+    return float(np.nanquantile(shares, a)), float(np.nanquantile(shares, 1 - a)), shares
+
+
+def decide(low: float, high: float, p_pre_post: float, cuts=RQ0B_CUTS, alpha: float = 0.05) -> str:
+    """The Plan 1c rule, fixed before running (spec §4.1): which period 1970-89 resembles."""
+    if not p_pre_post < alpha:
+        return "can't tell"
+    if low > 0 and high >= 1:
+        return str(cuts[0])
+    if low <= 0 and high < 1:
+        return str(cuts[1])
+    if low > 0 and high < 1:
+        return "gradual"
+    return "can't tell"

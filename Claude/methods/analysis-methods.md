@@ -77,6 +77,26 @@ Plan 1b (spec `docs/superpowers/specs/2026-10-14-rq0b-annual-break-dating-design
 - **Two scales for β:** β_before and β_after measure one-year growth, so they are about a tenth of the ten-year β. They are stored as `beta_before_annual`/`beta_after_annual` and shown ×10 as `beta_before_10y`/`beta_after_10y` next to decade results. In the standardized-income rows, log income is z-scored within year, so the `beta_*` columns there are per standard deviation of log income and are not on the decade scale.
 - **Outputs:** figure `reports/figures/rq0b_annual_betas.png`; tables `reports/tables/rq0b_annual_tests.csv` (columns as in the spec plus `at_edge`, `reported_range`, `sup_wald_cv5` and `multi_breaks`; D-28) and `reports/tables/rq0b_annual_range_coverage.csv`.
 
+## RQ0b — 1970 or 1990? (Plan 1c)
+
+Plan 1c (spec `docs/superpowers/specs/2026-10-15-rq0b-1970-vs-1990-design.md`, §4; code `three_period`, `share_range`, `decide` in `modeling/annual_breaks.py`). Plan 1b dated one break; the question here is which of two candidate dates the change belongs to, or whether it was gradual. The results come in a later task.
+
+- **Model (`three_period`):** one-year growth on log income with a separate slope for each of three periods, cuts at 1970 and 1990 (`config.RQ0B_CUTS`): β_pre (growth years to 1969), β_mid (1970–1989), β_post (1990 on). Decade data use the same cuts (1950s–60s, 1970s–80s, 1990s on). Fixed effects for each cell (the year by default) are removed by demeaning within cells, which is exact because each cell lies inside one period. Standard errors are clustered by unit, with statsmodels' small-sample factor G/(G−1)·(N−1)/(N−K), K = cells + 3 slopes; p-values are chi-square(1), as `wald_test(..., use_f=False)` (test against statsmodels with cell dummies).
+- **Share:** share = (β_pre − β_mid) / (β_pre − β_post). 0 means 1970–89 looks like the period before, 1 means it looks like the period after. The 90% range comes from resampling whole units (`share_range`, 999 draws, seed 0), keeping each unit's years together. Draws where a period has no variation in income give an undefined share and are skipped.
+- **Decision rule (`decide`, fixed before running, never tuned to results):**
+
+  | range (low, high) | answer |
+  |---|---|
+  | low > 0 and high ≥ 1 | 1970 |
+  | low ≤ 0 and high < 1 | 1990 |
+  | low > 0 and high < 1 | gradual |
+  | low ≤ 0 and high ≥ 1 | can't tell |
+
+  Guard: if β_pre = β_post is not rejected at 5% (clustered Wald), the answer is "can't tell", whatever the range says.
+- **Fragile:** the main version sets the answer. If any robustness version gives a different answer, the finding is reported as "fragile".
+- **Cells:** the main version has year cells only. Robustness versions use year × energy group in 1973–1990 (`oil_cells`; the `features.energy_states` rule, the hand list, and a 1973–1986 window) or year × census division (`division_cells`, the within-region check). Both cell types lie inside one year, so the slopes stay exact.
+- **Additivity:** OLS is linear in the outcome, so β for total growth equals β for net migration plus β for natural increase, period by period (test).
+
 ## RQ0c — Global timing (5-year, 1950–2020)
 
 Agglomeration population growth regressed on national GDP per capita growth and the national urbanization rate. Estimated separately by peer group, with decade interactions.

@@ -248,3 +248,80 @@ def test_division_cells():
     divisions = pd.Series({f"{i:02d}": (i % 9) + 1 for i in range(1, 49)})
     dp = ab.division_cells(state_panel(lambda y: 0.02, years=range(2000, 2002)), divisions)
     assert dp.set_index(["geo_id", "year"]).cell[("state:09", 2000)] == "2000-1"
+
+
+STEP_1970 = lambda y: 0.03 if y < 1970 else 0.0  # noqa: E731
+STEP_1990 = lambda y: 0.03 if y < 1990 else 0.0  # noqa: E731
+SLIDE = lambda y: 0.03 if y < 1970 else 0.0 if y >= 1990 else 0.03 * (1990 - y) / 20  # noqa: E731
+
+
+def test_three_period_matches_statsmodels_with_cell_dummies():
+    dp = ab.oil_cells(state_panel(STEP_1970, years=range(1960, 2000), oil=True), ENERGY)
+    r = ab.three_period(dp, cell="cell")
+    seg = np.searchsorted([1970, 1990], dp.year, side="right")
+    X = pd.get_dummies(dp.cell, prefix="c", dtype=float)
+    for s in range(3):
+        X[f"s{s}"] = dp.log_income * (seg == s)
+    fit = sm.OLS(dp.growth, X).fit(cov_type="cluster", cov_kwds={"groups": pd.factorize(dp.geo_id)[0]})
+    assert [r.beta_pre, r.beta_mid, r.beta_post] == pytest.approx(list(fit.params[["s0", "s1", "s2"]]), rel=1e-10)
+    for stat, p, constraint in [(r.wald_pre_post, r.p_pre_post, "s0 = s2"),
+                                (r.wald_mid_pre, r.p_mid_pre, "s1 = s0"),
+                                (r.wald_mid_post, r.p_mid_post, "s1 = s2")]:
+        w = fit.wald_test(constraint, scalar=True, use_f=False)
+        assert stat == pytest.approx(float(w.statistic), rel=1e-8)
+        assert p == pytest.approx(float(w.pvalue), rel=1e-6, abs=1e-12)
+
+
+@pytest.mark.parametrize("beta_for, answer", [(STEP_1970, "1970"), (STEP_1990, "1990"), (SLIDE, "gradual")])
+def test_decision_rule_recovers_planted_pattern(beta_for, answer):
+    dp = state_panel(beta_for)
+    r = ab.three_period(dp)
+    low, high, _ = ab.share_range(dp, draws=199)
+    assert ab.decide(low, high, r.p_pre_post) == answer
+
+
+def test_no_change_is_cant_tell():
+    dp = state_panel(lambda y: 0.02)
+    r = ab.three_period(dp)
+    low, high, _ = ab.share_range(dp, draws=199)
+    assert r.p_pre_post > 0.05 and ab.decide(low, high, r.p_pre_post) == "can't tell"
+
+
+def test_guard_overrides_a_decisive_looking_range():
+    assert ab.decide(0.9, 1.1, p_pre_post=0.2) == "can't tell"
+    assert ab.decide(0.9, 1.1, p_pre_post=0.01) == "1970"
+
+
+@pytest.mark.parametrize("low, high, answer", [(0.2, 1.3, "1970"), (1.1, 1.5, "1970"), (-0.4, 0.6, "1990"),
+                                                (-0.9, -0.1, "1990"), (0.1, 0.8, "gradual"), (-0.2, 1.2, "can't tell")])
+def test_decision_table(low, high, answer):
+    assert ab.decide(low, high, p_pre_post=0.001) == answer
+
+
+def test_oil_cells_turn_a_fake_gradual_into_1970():
+    dp = state_panel(STEP_1970, oil=True)
+    plain = ab.three_period(dp)
+    lo0, hi0, _ = ab.share_range(dp, draws=199)
+    cells = ab.oil_cells(dp, ENERGY)
+    fixed = ab.three_period(cells, cell="cell")
+    lo1, hi1, _ = ab.share_range(cells, cell="cell", draws=199)
+    assert ab.decide(lo0, hi0, plain.p_pre_post) != "1970"
+    assert ab.decide(lo1, hi1, fixed.p_pre_post) == "1970"
+
+
+def test_betas_add_up_across_outcomes():
+    # total = migration + natural increase; OLS is linear in y, so the betas add up exactly
+    dp = state_panel(STEP_1970, years=range(1950, 2020, 10)).rename(columns={"year": "decade"})
+    rng = np.random.default_rng(1)
+    m = dp.assign(growth=dp.growth * 0.6 + rng.normal(0, 0.01, len(dp)))
+    n = dp.assign(growth=dp.growth - m.growth)
+    t, a, b = (ab.three_period(d, period="decade") for d in (dp, m, n))
+    for f in ("beta_pre", "beta_mid", "beta_post"):
+        assert getattr(t, f) == pytest.approx(getattr(a, f) + getattr(b, f), abs=1e-12)
+
+
+def test_share_range_skips_degenerate_draws():
+    # one unit only has the "after" period, so some draws leave the middle period empty
+    dp = state_panel(STEP_1970, n_units=6, years=range(1960, 2000))
+    low, high, draws = ab.share_range(dp, draws=99)
+    assert np.isfinite(low) and np.isfinite(high) and len(draws) == 99
