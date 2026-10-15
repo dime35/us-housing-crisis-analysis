@@ -30,7 +30,7 @@ def test_national_net_migration_is_positive(processed):
 # https://www.census.gov/programs-surveys/decennial-census/about/coverage-measurement/da.2000_Demographic_Analysis.html).
 # So coverage improved in 1970-80 (+2.7M, residual too high), worsened in 1980-90 (-1.9M, too
 # low) and improved in 1990-2000 (+4.4M, too high). Those decades are held to that direction
-# and a 25% bound instead of the 5% match (Plan 1c Task 4 report).
+# and a 25% bound instead of the 5% match.
 COVERAGE_SHIFT = {1970: +1, 1980: -1, 1990: +1}
 
 
