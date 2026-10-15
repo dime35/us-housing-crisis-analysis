@@ -322,10 +322,14 @@ def _segments(dp: pd.DataFrame, period: str, cuts) -> np.ndarray:
     return np.searchsorted(np.asarray(cuts), dp[period].to_numpy(), side="right")
 
 
-def _three_betas(seg, xd, yd, w):
+def _three_betas(seg, x, xd, yd, w):
+    """Slope per period on demeaned data. A period with no x-variation gives NaN: no weight, or
+    one distinct unit drawn several times, whose demeaned x is only rounding residue (sxx about
+    1e-33), so sxx is compared with the period's sum of squares of x before demeaning."""
     sxx, sxy = np.bincount(seg, w * xd * xd, 3), np.bincount(seg, w * xd * yd, 3)
+    degenerate = sxx <= 1e-12 * np.bincount(seg, w * x * x, 3)
     with np.errstate(divide="ignore", invalid="ignore"):
-        return sxy / sxx, sxx
+        return np.where(degenerate, np.nan, sxy / sxx), sxx
 
 
 def _share(b) -> float:
@@ -343,7 +347,7 @@ def three_period(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: s
     ones = np.ones(len(x))
     xd, yd = _demean(cc, x, y, ones, ncell)
     seg = _segments(dp, period, cuts)
-    b, sxx = _three_betas(seg, xd, yd, ones)
+    b, sxx = _three_betas(seg, x, xd, yd, ones)
     e = yd - b[seg] * xd
     n_units, n, k = g.max() + 1, len(x), ncell + 3
     scores = np.column_stack([np.bincount(g, np.where(seg == s, xd * e, 0.0), n_units) for s in range(3)])
@@ -373,7 +377,7 @@ def share_range(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: st
     for d in range(draws):
         w = np.bincount(rng.integers(0, n_units, n_units), minlength=n_units)[g].astype(float)
         xd, yd = _demean(cc, x, y, w, ncell)
-        shares[d] = _share(_three_betas(seg, xd, yd, w)[0])
+        shares[d] = _share(_three_betas(seg, x, xd, yd, w)[0])
     a = (1 - level) / 2
     return float(np.nanquantile(shares, a)), float(np.nanquantile(shares, 1 - a)), shares
 

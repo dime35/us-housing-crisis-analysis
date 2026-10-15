@@ -328,3 +328,16 @@ def test_share_range_skips_degenerate_draws():
     low, high, draws = ab.share_range(dp, draws=999)
     assert len(draws) == 999 and np.isnan(draws).any()
     assert np.isfinite(low) and np.isfinite(high)
+
+
+def test_a_period_with_one_unit_drawn_several_times_gives_nan_not_a_finite_share():
+    # Period 0 holds a single distinct unit, drawn 3 times. Demeaning leaves rounding residue
+    # (3 * 0.1 / 3 != 0.1 in floating point), not exact zeros, so sxx is about 1e-33, not 0.
+    t = np.array([0, 1, 1, 2, 2])
+    x, y = np.array([0.1, 1.0, 2.0, 1.5, 3.0]), np.array([0.7, 2.0, 3.0, 4.0, 5.0])
+    w = np.array([3.0, 1.0, 1.0, 1.0, 1.0])
+    xd, yd = ab._demean(t, x, y, w, 3)
+    assert xd[0] != 0  # the residue the guard has to catch
+    b, _ = ab._three_betas(t, x, xd, yd, w)
+    assert np.isnan(b[0]) and np.isfinite(b[1:]).all()
+    assert np.isnan(ab._share(b))
