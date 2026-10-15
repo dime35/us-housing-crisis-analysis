@@ -23,7 +23,10 @@ dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["data: needs built data in data/; skipped when it is absent"]
+markers = [
+  "data: needs built data in data/; skipped when it is absent",
+  "slow: simulation checks that take more than a few seconds",
+]
 
 
 [tool.ruff]

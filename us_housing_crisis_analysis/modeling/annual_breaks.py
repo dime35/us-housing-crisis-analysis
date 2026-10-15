@@ -171,3 +171,80 @@ def sup_wald_break(dp: pd.DataFrame, trim: float = 0.15) -> SingleBreak:
         trim=trim, first_candidate=int(periods[cand[0]]), last_candidate=int(periods[cand[-1]]),
         n_units=int(g.max() + 1), first_year=int(periods[0]), last_year=int(periods[-1]),
     )
+
+
+# Bai (1997): quantiles of the break-date limiting distribution (symmetric case), by coverage
+BAI_CRITICAL = {0.90: 7.7, 0.95: 11.0}
+# Coverage rule for the bootstrap range (Plan 1b spec §6, as amended): at least COVERAGE_MIN of
+# synthetic panels must have the planted year inside the 90% range. Above COVERAGE_MAX the range
+# is conservative (common with sharp breaks, since years are whole numbers) but still used.
+COVERAGE_MIN, COVERAGE_MAX = 0.80, 0.97
+
+
+@dataclass(frozen=True)
+class BreakRange:
+    low: int
+    high: int
+    estimates: np.ndarray
+
+
+def _estimate(t, x, y, w, nt, cand) -> int:
+    """Position of the best-fitting break with rows weighted by w."""
+    xd, yd = _demean(t, x, y, w, nt)
+    ssr, _, _ = _ssr_candidates(*_sums(t, xd, yd, w, nt), cand)
+    return int(cand[int(np.nanargmin(ssr))])
+
+
+def bootstrap_break_year(dp: pd.DataFrame, trim: float = 0.15, draws: int = 999,
+                         level: float = 0.90, seed: int = 0) -> BreakRange:
+    """Resample whole units with replacement (keeping each unit's years together), re-estimate
+    the break year each time, and return the middle `level` share of the estimates."""
+    periods, t, g, x, y = _arrays(dp)
+    nt, n_units = len(periods), g.max() + 1
+    cand = candidate_positions(nt, trim)
+    rng = np.random.default_rng(seed)
+    est = np.empty(draws, dtype=int)
+    for d in range(draws):
+        w = np.bincount(rng.integers(0, n_units, n_units), minlength=n_units)[g].astype(float)
+        est[d] = periods[_estimate(t, x, y, w, nt, cand)]
+    a = (1 - level) / 2
+    return BreakRange(int(np.floor(np.quantile(est, a))), int(np.ceil(np.quantile(est, 1 - a))), est)
+
+
+def bai_interval(dp: pd.DataFrame, result: SingleBreak, level: float = 0.90) -> tuple[int, int]:
+    """Bai (1997) interval for the break year: break_year +/- ceil(c / L), with
+    L = delta^2 * Q^2 / Omega, delta the slope change, Q the mean per-year sum of demeaned x^2 and
+    Omega the mean per-year sum of (x e)^2 (heteroskedasticity-robust across units; it ignores
+    serial correlation, which the bootstrap keeps). Clipped to the sample years."""
+    periods, t, _, x, y = _arrays(dp)
+    nt, ones = len(periods), np.ones(len(t))
+    xd, yd = _demean(t, x, y, ones, nt)
+    c = int(np.searchsorted(periods, result.break_year))
+    e = yd - np.where(t < c, result.beta_before, result.beta_after) * xd
+    q = np.bincount(t, xd * xd, nt).mean()
+    omega = np.bincount(t, (xd * e) ** 2, nt).mean()
+    half = int(np.ceil(BAI_CRITICAL[level] / ((result.beta_after - result.beta_before) ** 2 * q**2 / omega)))
+    return max(int(periods[0]), result.break_year - half), min(int(periods[-1]), result.break_year + half)
+
+
+def range_coverage(dp: pd.DataFrame, result: SingleBreak, sims: int = 200, draws: int = 199,
+                   level: float = 0.90, seed: int = 0) -> dict[str, float]:
+    """Share of synthetic panels whose range contains the planted break. Each panel keeps the
+    real units, years and incomes, plants the estimated break and slopes, and reuses the fitted
+    residuals with a random sign per unit (keeping each unit's serial correlation)."""
+    periods, t, g, x, y = _arrays(dp)
+    nt, ones = len(periods), np.ones(len(t))
+    xd, yd = _demean(t, x, y, ones, nt)
+    c = int(np.searchsorted(periods, result.break_year))
+    slope = np.where(t < c, result.beta_before, result.beta_after)
+    resid = yd - slope * xd
+    rng = np.random.default_rng(seed)
+    hits = {"bootstrap": 0, "bai": 0}
+    for s in range(sims):
+        fake = dp.assign(growth=slope * xd + resid * rng.choice([-1.0, 1.0], g.max() + 1)[g])
+        r = sup_wald_break(fake, result.trim)
+        b = bootstrap_break_year(fake, result.trim, draws, level, seed=s)
+        lo, hi = bai_interval(fake, r, level)
+        hits["bootstrap"] += b.low <= result.break_year <= b.high
+        hits["bai"] += lo <= result.break_year <= hi
+    return {k: v / sims for k, v in hits.items()}

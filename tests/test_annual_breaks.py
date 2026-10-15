@@ -132,3 +132,42 @@ def test_oil_cycle_breaks_the_full_panel_but_not_the_one_without_energy_units():
     assert ab.sup_wald_break(dp).sup_wald > ab.andrews_critical_value(0.15)
     without = ab.sup_wald_break(dp[~dp.energy])
     assert without.sup_wald < without.critical_value
+
+
+def test_bootstrap_range_covers_planted_break():
+    dp = simulate(lambda y: 0.03 if y < 1978 else 0.0, noise=0.02)
+    r = ab.bootstrap_break_year(dp, draws=199)
+    assert r.low <= 1978 <= r.high and r.high - r.low <= 10
+    assert len(r.estimates) == 199
+
+
+def test_bootstrap_survives_a_year_with_a_single_unit():
+    dp = simulate(lambda y: 0.03 if y < 1978 else 0.0, n_units=20, years=range(1960, 2000), noise=0.05)
+    dp = dp[(dp.year != 1990) | (dp.geo_id == "u0")]  # 1990 often has no unit in a draw
+    r = ab.bootstrap_break_year(dp, draws=99)
+    assert 1960 <= r.low <= r.high <= 1999 and not np.isnan(r.estimates).any()
+
+
+def test_bai_interval_contains_break_and_narrows_with_signal():
+    weak = simulate(lambda y: 0.03 if y < 1978 else 0.0, noise=0.03)
+    strong = simulate(lambda y: 0.03 if y < 1978 else 0.0, noise=0.01)
+    lo_w, hi_w = ab.bai_interval(weak, ab.sup_wald_break(weak))
+    lo_s, hi_s = ab.bai_interval(strong, ab.sup_wald_break(strong))
+    assert lo_w <= 1978 <= hi_w and lo_s <= 1978 <= hi_s
+    assert hi_s - lo_s < hi_w - lo_w
+
+
+def test_range_coverage_returns_fractions():
+    dp = simulate(lambda y: 0.03 if y < 1978 else 0.0, noise=0.05, years=range(1969, 2024))
+    cov = ab.range_coverage(dp, ab.sup_wald_break(dp), sims=10, draws=49)
+    assert set(cov) == {"bootstrap", "bai"} and all(0 <= v <= 1 for v in cov.values())
+
+
+@pytest.mark.slow
+def test_bootstrap_range_coverage_meets_the_rule():
+    # Plan 1b spec §6: >= 200 synthetic panels; the 90% range must contain the planted year
+    # at least COVERAGE_MIN of the time (the prototype gave 0.945). The noise is high on purpose,
+    # so the range is wide and coverage is a real test.
+    dp = simulate(lambda y: 0.03 if y < 1978 else 0.0, noise=0.05)
+    cov = ab.range_coverage(dp, ab.sup_wald_break(dp), sims=200, draws=199)
+    assert cov["bootstrap"] >= ab.COVERAGE_MIN, cov
