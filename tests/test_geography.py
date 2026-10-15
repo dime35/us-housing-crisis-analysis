@@ -45,3 +45,9 @@ def test_fips_from_nhgis_codes():
     assert geo.fips_from_gisjoin("G2405100") == "24510"
     assert geo.fips_from_nhgis_code("4600015") is None  # historical county, no FIPS
     assert geo.fips_from_nhgis_code("") is None
+
+
+def test_first_listed_state_fips():
+    titles = pd.Series(["Dallas-Fort Worth-Arlington, TX", "New York-Newark-Jersey City, NY-NJ",
+                        "Cheyenne, WY", "Aguadilla, PR"])
+    assert geo.first_listed_state_fips(titles).tolist() == ["48", "36", "56", "72"]

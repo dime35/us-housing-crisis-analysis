@@ -46,7 +46,8 @@ Every source's `load()` returns these columns: `geo_id, geo_name, geo_level, cou
 |---|---|---|
 | `us_state_longrun` | state × decade, 1880–2020 (population, income per capita, income source) | RQ0b |
 | `us_metro_longrun` | metro × decade, 1900–2020 | RQ0a, RQ0b, RQ3 |
-| `us_metro_annual` | metro × year, 2000+ | RQ2, RQ4 |
+| `us_state_annual` | state × year, 1929–2024 (BEA population and income per capita; Alaska and Hawaii from 1950) | RQ0b (Plan 1b) |
+| `us_metro_annual` | 2023 CBSA × year, 1969–2024 (BEA county sums of population and personal income); `growth_comparable` at year t refers to growth t → t+1 and is False where a county split crosses a metro line (D-27). Build step 5 adds housing columns | RQ0b (Plan 1b), RQ2, RQ4 |
 | `oecd_metro_panel` | metro × year, ~2000–2022 | RQ1, RQ2 |
 | `global_agglomerations` | agglomeration × 5 years, 1950–2020 | RQ0c |
 | `national_housing` | country × year | RQ3, RQ4 |

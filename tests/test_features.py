@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from us_housing_crisis_analysis import features
 
@@ -122,3 +123,63 @@ def test_metro_decade_with_a_county_split_is_flagged_not_comparable(tmp_path, mo
     assert not p.loc[("cbsa:14500", 2000), "growth_comparable"]
     assert not p.loc[("cbsa:19740", 2000), "growth_comparable"]
     assert p.loc[("cbsa:14500", 1990), "growth_comparable"] and p.loc[("cbsa:14500", 2010), "growth_comparable"]
+
+
+def test_state_annual_panel_joins_population_and_income():
+    bea = long([("state:24", "state", 1929, "population_bea", 1.6e6),
+                ("state:24", "state", 1929, "income_pc", 900),
+                ("state:24", "state", 1930, "population_bea", 1.63e6),  # income missing: NaN
+                ("state:24", "state", 2025, "income_pc", 80_000)], "bea")  # past the panel end
+    p = features.build_us_state_annual(bea).set_index(["geo_id", "year"])
+    assert p.loc[("state:24", 1929), "income_pc"] == 900
+    assert np.isnan(p.loc[("state:24", 1930), "income_pc"])
+    assert list(p.index.get_level_values("year")) == [1929, 1930]
+    assert set(p.income_source.dropna()) == {"bea"}
+
+
+def _split_crosswalk():
+    # Broomfield (08014) and Adams (08001) in Denver, Boulder (08013) in its own metro
+    return pd.DataFrame({"county_fips": ["08014", "08001", "08013"], "cbsa_code": ["19740", "19740", "14500"],
+                         "cbsa_title": ["Denver, CO", "Denver, CO", "Boulder, CO"], "area_type": ["metro"] * 3})
+
+
+def test_metro_annual_panel_sums_counties_and_flags_split_growth_years():
+    rows = []
+    for y in (2000, 2001, 2002):
+        rows += [("county:08001", "county", y, "population_bea", 300.0), ("county:08001", "county", y, "personal_income", 3000.0),
+                 ("county:08013", "county", y, "population_bea", 200.0), ("county:08013", "county", y, "personal_income", 4000.0)]
+    rows += [("county:08014", "county", 2002, "population_bea", 40.0), ("county:08014", "county", 2002, "personal_income", 800.0)]
+    p = features.build_us_metro_annual(long(rows, "bea"), _split_crosswalk()).set_index(["geo_id", "year"])
+    assert p.loc[("cbsa:19740", 2002), "population"] == 340.0
+    assert p.loc[("cbsa:19740", 2002), "income_pc"] == 3800.0 / 340.0
+    # Broomfield first appears in 2002, so the 2001 -> 2002 step compares different areas
+    assert not p.loc[("cbsa:19740", 2001), "growth_comparable"]
+    assert not p.loc[("cbsa:14500", 2001), "growth_comparable"]
+    assert p.loc[("cbsa:19740", 2000), "growth_comparable"] and p.loc[("cbsa:19740", 2002), "growth_comparable"]
+
+
+def test_split_growth_years_ignores_splits_before_the_panel_starts():
+    first_year = pd.Series({"08014": 2002, "35028": 1969})  # Los Alamos (1949) is in place by 1969
+    cw = pd.concat([_split_crosswalk(), pd.DataFrame({"county_fips": ["35028", "35043"], "cbsa_code": ["31060", "10740"],
+                                                      "cbsa_title": ["Los Alamos, NM", "Albuquerque, NM"], "area_type": ["metro"] * 2})])
+    flagged = features.split_growth_years(cw, first_year, start=1969)
+    assert flagged == {("19740", 2001), ("14500", 2001)}  # 08014's other parents aren't in this crosswalk
+
+
+def test_energy_states_rule():
+    bea = long([("state:56", "state", 1980, "earnings_total", 100.0), ("state:56", "state", 1980, "earnings_mining", 30.0),
+                ("state:24", "state", 1980, "earnings_total", 900.0), ("state:24", "state", 1980, "earnings_mining", 0.5),
+                ("state:11", "state", 1980, "earnings_total", 50.0)], "bea")  # mining suppressed: not energy
+    e = features.energy_states(bea).set_index("state_fips")
+    national = 30.5 / 1000.0  # states with both values
+    assert e.loc["56", "ratio"] == pytest.approx(0.3 / national)
+    assert e.energy.to_dict() == {"56": True, "24": False, "11": False}
+    assert e.index[0] == "56"
+
+
+def test_drop_states_for_states_and_metros():
+    states = pd.DataFrame({"geo_id": ["state:48", "state:24"], "geo_name": ["Texas", "Maryland"]})
+    metros = pd.DataFrame({"geo_id": ["cbsa:19100", "cbsa:12580"],
+                           "geo_name": ["Dallas-Fort Worth-Arlington, TX", "Baltimore-Columbia-Towson, MD"]})
+    assert features.drop_states(states, {"48"}).geo_id.tolist() == ["state:24"]
+    assert features.drop_states(metros, {"48"}).geo_id.tolist() == ["cbsa:12580"]
