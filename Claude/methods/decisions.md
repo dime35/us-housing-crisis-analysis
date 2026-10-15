@@ -201,8 +201,22 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Alternatives:** reallocating pre-split population by the new county's share at its first census; documenting only.
 - **Decided by:** user (approach, 2026-10-14); proposed by Claude.
 
+### D-28 · Plan 1b judgment calls (annual break dating)
+- **Decision:**
+  - **Order of work:** Plan 1b runs on its own branch (`plan-1b-annual-breaks`, off `plan-1-rq0b`), before Plan 2 (RQ0a). *Decided by: user, 2026-10-14.*
+  - **Energy-state rule and list:** a state counts as an energy state if its 1980 mining share of earnings is at least 3× the national share (2.03%). The rule gives WY 11.9×, WV 7.8×, OK 4.9×, NM 4.7×, LA 4.0×, KY 3.8×, TX 3.1× and AK 3.02×. It picks Kentucky (coal) and leaves out North Dakota (2.7×), so the hand list (TX, OK, LA, WY, AK, NM, WV, ND) is also run as a robustness check, as the spec provides. A data test pins the eight states, so a BEA revision that moves Alaska across the line is caught. *Decided by: user (rule and fallback to the hand list), 2026-10-14; Claude (applying the fallback).*
+  - **Where the results go:** a new section in notebook 1.1, so RQ0b stays one story. *Decided by: user, 2026-10-14.*
+  - **Trimming:** 15% for the main result and 5% as a check for metros and the 1969+ states. Edge estimates are written "at or before". The 1929–2024 state series is what dates early-1970s breaks. *Decided by: user, 2026-10-14.*
+  - **Coverage rule for the bootstrap range:** the target band is 80–97%. Below 80%, Bai's interval is reported instead. Above 97%, the bootstrap range is still used and noted as conservative, which happens legitimately with sharp breaks because years are whole numbers. Results: states 96%, metros 98% (conservative). *Decided by: user, 2026-10-14.*
+  - **Split growth years come from the data:** BEA first shows the new counties in Broomfield 2002, La Paz 1983 and Cibola 1982, so the flagged growth steps are 2001 (Denver, Boulder, Greeley), 1982 (Yuma) and 1981 (Albuquerque). The spec's "La Paz 1983" was the legal split year. *Decided by: Claude.*
+  - **Candidate positions:** the first candidate break is at position floor(trim · n) of n growth years, and the last at n − floor(trim · n). This makes the candidate range slightly wider than the nominal trim (14/95 = 0.147 at 15%). *Decided by: Claude.*
+  - **Extra table columns:** `rq0b_annual_tests.csv` adds `at_edge`, `reported_range`, `sup_wald_cv5` and `multi_breaks` to the spec's list, so the table can be read on its own. *Decided by: Claude.*
+- **Why:** each call keeps the method as the approved Plan 1b spec describes it and records where the data forced a choice. The methods are in `analysis-methods.md` (RQ0b — annual break dating).
+- **Alternatives:** the hand list only (the rule is reproducible and was approved first); the legal split years (they don't match what the BEA data shows); Bai's interval as the main range (its simulated coverage is 55–78%).
+
 ## Open items
-- Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27). Open: Plan 1b spec review (annual break dating; discussion log next to the spec), then Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits.
+- Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27).
+- Plan 1b (annual break dating) is complete on branch `plan-1b-annual-breaks` (D-28). Finding: annual data confirm the state break but can't pin down the year (about 1990 with all states, about 1970 without the energy states). Next is Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits. RQ0c (global timing) is in design.
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.

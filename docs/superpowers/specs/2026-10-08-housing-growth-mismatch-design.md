@@ -20,7 +20,7 @@ Many US cities grew rapidly before 1950 and have plateaued since. This project a
 | ID | Question | Hypothesis | Tier / years |
 |---|---|---|---|
 | RQ0a | How much of the post-1950 plateau in US cities is suburbanization (city vs. metro) versus real metro stagnation? | City-proper plateaus are largely boundary artifacts; metro slowdown is later and uneven | Tier 0, 1900–2020 |
-| RQ0b | Is there a structural break in how US population growth responds to income, and when? | The relationship holds through 1950 and weakens after ~1980 (cf. Ganong & Shoag 2017) | Tier 0: states 1880–2020; metros 1940–2020 |
+| RQ0b | Is there a structural break in how US population growth responds to income, and when? | The relationship holds through 1950 and weakens after ~1980 (cf. Ganong & Shoag 2017) | Tier 0: states 1880–2020 decennial and 1929–2024 annual; metros 1940–2020 decennial and 1969–2024 annual |
 | RQ0c | Do non-US agglomerations show the same timing? | Peer cities show no comparable break, or a different one | Tier 0 global, 1950–2020 |
 | RQ1 | For the same GDP growth, do US metros add fewer people than OECD peers? | The population-to-GDP growth elasticity is lower in the US | Tier 1, ~2000–2022 |
 | RQ2 | Within the US, are the metros with the largest mismatch the ones that build least? | High-GDP-growth, low-permit metros show the largest gap | Tier 2, US metros |
@@ -134,7 +134,8 @@ us_housing_crisis_analysis/
 |---|---|---|
 | `us_state_longrun` | state × decade, 1880–2020 | RQ0b (state version) |
 | `us_metro_longrun` | metro × decade, 1900–2020, plus city-proper for major cities | RQ0a, RQ0b (metro version), RQ3 (long run) |
-| `us_metro_annual` | metro × year, 2000+ | RQ2, RQ4 |
+| `us_state_annual` | state × year, 1929–2024 (BEA population and income) | RQ0b (annual break dating, Plan 1b) |
+| `us_metro_annual` | metro × year, 1969–2024: population and income from 1969 (Plan 1b); housing columns added in build step 5 | RQ0b (annual), RQ2, RQ4 |
 | `oecd_metro_panel` | metro × year, ~2000–2022 | RQ1, RQ2 |
 | `global_agglomerations` | agglomeration × 5-year step, 1950–2020, with peer group | RQ0c |
 | `national_housing` | country × year | RQ3, RQ4 |
@@ -167,6 +168,7 @@ Full write-ups are kept in `Claude/methods/analysis-methods.md`.
 
 - **RQ0a — city vs. metro decomposition.** Track the central city's share of metro population by decade and split metro growth into core and suburban parts. Classify each metro as: suburbanizing (core declined, metro grew), stagnant (both stagnated), growing (both grew), or core-recovery.
 - **RQ0b — US structural break.** For each decade d: Δln(pop)_i,d = α_d + β_d · ln(income per capita)_i,d + ε, where i is a state or a metro, Δln(pop)_i,d is growth from the start of decade d to the start of the next, and income is measured at the start of decade d (so it precedes the growth it explains). Each version starts at the first decade from which income exists for every decade onward, with no interpolated gaps: **states 1880–2020**, **metros 1940–2020**. Plot β_d for both versions. The break tests run on the pooled unit × decade panel, with income interacted with period indicators, because a series of 7–14 β_d values is too short for them: Chow tests at 1950 and 1980 (Wald tests with standard errors clustered by unit), and a Bai-Perron-style global search over decade boundaries, with the number of breaks chosen by BIC. Changes of income source (e.g., Klein → Easterlin → BEA) happen between decades, so the decade fixed effects already absorb any level shift they cause; a separate source indicator would be collinear with them. Two robustness checks cover the rest: income standardized within each decade (for sources with different spreads), and results without the decades where the source changes.
+  - **Annual break dating (Plan 1b; spec `2026-10-14-rq0b-annual-break-dating-design.md`).** With BEA annual data (states 1929–2024, metros 1969–2024; one source for population and income), rolling ten-year (and five-year) β by start year gives the picture. A pooled one-year growth model with year fixed effects and one slope change dates the break: the year is the lowest-SSR candidate (15% trimming, 5% as a check), significance is sup-Wald with errors clustered by unit against simulated Andrews (1993) critical values, and the range is a unit bootstrap checked by simulation, with Bai's (1997) interval alongside. A multi-break BIC search is the cross-check. Robustness: without energy states, standardized income, without WWII years, states 1969+ only, and a cross-check against the decade β.
 - **RQ0c — global timing.** Five-year agglomeration population growth regressed on national GDP per capita growth and urbanization rate, estimated by peer group with decade interactions.
 - **RQ1 — OECD elasticity.** Δ5 ln(pop)_it = β Δ5 ln(GDP)_it + γ (Δ5 ln(GDP)_it × US_i) + metro FE + year FE, with standard errors clustered by country. A robustness check replaces GDP with GDP per worker. Reported as an association because of reverse causality.
 - **RQ2 — US mismatch.** Metro residuals from an RQ1-style model regressed on permits per capita and the Wharton index.
@@ -248,6 +250,8 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 | Risk | Mitigation |
 |---|---|
 | Metro boundaries change over time | Constant 2023 CBSA boundaries built from counties for all years; county boundary changes handled via NHGIS standardized or time-consistent tables where available, and documented |
+| Oil boom and bust (1970s–1980s) mistaken for a break in the annual RQ0b data | Every annual result rerun without the energy states (1980 mining-share rule and a hand-picked list), reported next to the main result |
+| Intercensal population estimates are smoothed between censuses, which can blur a break's timing | Year fixed effects; the unit bootstrap keeps each unit's years together, so the break-year range widens instead of hiding it; stated as a limitation |
 | Historical income data is coarse | Each RQ0b version starts at the first decade with income for every decade onward (states 1880, metros 1940); no interpolation |
 | Changes of income source can look like structural breaks | Decade fixed effects absorb level shifts (source indicators would be collinear with them, D-20); income standardized within decade; results with and without the decades where the source changes |
 | 1940 census wage income is top-coded at $5,000 and excludes business and farm income | Documented as a limitation; metro results checked against the state version, which uses full personal income |
@@ -266,9 +270,10 @@ Tests focus on data correctness and estimator correctness, not code coverage. Ea
 
 1. Scaffolding: dependencies, config, long-format schema, test harness
 2. Tier 0 US: NHGIS, Census decennial, IPUMS 1940 full count, BEA income, Klein and Easterlin state income (hand-collected), crosswalks → `us_state_longrun` and `us_metro_longrun` → RQ0a and RQ0b notebooks
+   - 2b. Annual data: BEA → `us_state_annual` (1929–2024) and `us_metro_annual` (population and income from 1969) → RQ0b break dating (Plan 1b)
 3. Tier 0 global: UN WUP, World Bank, Maddison → `global_agglomerations` → RQ0c
 4. Tier 1: OECD and Eurostat metros → `oecd_metro_panel` → RQ1
-5. Tier 2: BPS, FHFA, Wharton, Census population estimates, OECD housing → `us_metro_annual` and `national_housing` → RQ2 to RQ4
+5. Tier 2: BPS, FHFA, Wharton, Census population estimates, OECD housing → housing columns added to `us_metro_annual` (created in step 2b) and `national_housing` → RQ2 to RQ4
 6. RQ5: Stats NZ → Auckland event study
 7. Featured cities, including hand-collected data
 8. Paper, dashboard, and the `make all` end-to-end check

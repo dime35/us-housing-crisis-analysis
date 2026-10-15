@@ -45,6 +45,37 @@ Growth runs from the start of decade d to the start of the next; income is measu
   - results with the source-change decades dropped (`source_change_decades`);
   - the metro version compared with the state version, which uses full personal income rather than 1940 wages.
 
+## RQ0b — annual break dating (states 1929–2024, metros 1969–2024)
+
+Plan 1b (spec `docs/superpowers/specs/2026-10-14-rq0b-annual-break-dating-design.md`; code `modeling/annual_breaks.py`). The question: *when* did the decade β change? BEA is the only source, for both population and income, in every year (`us_state_annual`, `us_metro_annual`; see `pipeline.md`). A unit missing a value drops out of that year only, and nothing is interpolated. A metro-year whose one-year growth crosses a county split is left out of every growth calculation (D-27, D-28).
+
+- **Rolling β (the picture, `rolling_betas`):** the decade model on overlapping windows: ln pop(t+h) − ln pop(t) on ln income(t), one cross-section per start year t, HC1 errors. h = 10 (main) and 5 (check). Starts: states 1929–2014, metros 1969–2014. A window is dropped for a metro if any step inside it is flagged. Neighboring windows share most of their years, so the curve is for reading, not testing.
+- **Single-break model (the test, `sup_wald_break`):** pooled one-year growth,
+  growth(i,t) = ln pop(i,t+1) − ln pop(i,t) = α_t + β_before · ln income(i,t) · [t < T] + β_after · ln income(i,t) · [t ≥ T] + e(i,t).
+  - **Demeaning:** growth and log income are demeaned within year once (weighted when bootstrapping). Every year lies wholly in one segment, so this removes the year effects exactly (Frisch-Waugh-Lovell), and each candidate T is a closed-form fit from cumulative sums.
+  - **Break year:** the candidate with the lowest sum of squared residuals (Bai-Perron choice). T is the first year of the "after" segment, i.e. the growth from T to T+1.
+  - **Trimming and candidate years:** with n growth years, the first candidate is position k = floor(trim · n) and the last is n − k, so each side has at least k years (D-28). The main trim is 15%. States 1929–2023 growth years (n = 95): candidates 1943–2010. States and metros 1969–2023 (n = 55): 1977–2016. A 5% trim is run as a check for metros and the 1969+ states (candidates 1971–2022). An estimate on the first candidate is flagged `at_edge` and written "at or before".
+  - **Significance:** for each candidate, a Wald test of β_before = β_after with standard errors clustered by unit (statsmodels' small-sample factor). The largest of these (sup-Wald) is compared with the Andrews (1993) 5% critical value for one restriction at the trim used. That value is simulated in code (Brownian bridge, 10,000-step grid, 20,000 draws, fixed seed), not copied from a table: 8.81 at 15% (table 8.85) and 9.84 at 5% (table 9.84). An ordinary p-value is never reported for the chosen year.
+  - **Caveats on the test:**
+    - Andrews' values are asymptotic and only approximate here. T is fixed at 95 or 55 years, the candidates are whole years, the effective "time" the statistic moves along is weighted by how spread out incomes are in each year (not uniform), and floor trimming makes the candidate range slightly wider than π0 (k/n = 14/95 = 0.147 and 8/55 = 0.145 at 15%; 2/55 = 0.036 at 5%).
+    - The break year is the lowest-SSR year, while significance is the largest clustered Wald statistic over all candidates. The two can sit in different years. Without the energy states (rule), for example, the best fit is 1970 but the largest Wald statistic is at 1989; the Wald statistic at 1970 is 16.5, still above 8.81.
+- **Range for the break year:**
+  - **Bootstrap (`bootstrap_break_year`):** resample whole units with replacement (999 draws, seed 0), re-estimate T, and take the middle 90%. Whole units keep each unit's years together, so it respects serial correlation within a unit, including the smoothing from intercensal estimates.
+  - **Bai (1997) interval (`bai_interval`):** T ± ceil(7.7 / L) at 90%, with L = (Δβ)² Q² / Ω, Q the mean per-year sum of demeaned x², and Ω the mean per-year sum of (x e)². It allows for heteroskedasticity across units but ignores serial correlation within a unit and correlation across units in the same year (spatial correlation), so it is expected to be too narrow on this data.
+  - **Coverage check and rule (`range_coverage`, owner's rule, D-28):** 200 synthetic panels keep the real units, years and incomes, plant the estimated break and slopes, and reuse the fitted residuals with a random sign per unit (199 bootstrap draws each). Target: the bootstrap 90% range contains the planted year in 80–97% of panels. Below 80%, Bai's interval is reported instead. Above 97%, the bootstrap range is still used and noted as conservative. That is legitimate with sharp breaks, since a one-year range around a whole-number year always contains the truth. Results (main specifications, `rq0b_annual_range_coverage.csv`):
+    - states: bootstrap 96%, Bai 55.5%;
+    - metros: bootstrap 98% (above the band, so conservative), Bai 78%.
+    - The bootstrap range is reported for both versions (`reported_range`). The Bai interval's low coverage matches its known blind spots.
+- **More than one break (`demeaned_break_search`):** the Plan 1 BIC search (0–3 breaks, segments of at least 5 years, break dates counted as parameters) on the demeaned data. The year effects still count as parameters. On small panels it returns the same breaks and BIC as `breaks.break_search` with year dummies (test).
+- **Energy states (`features.energy_states`):** a state whose 1980 mining share of earnings (BEA SAINC5S line 200 ÷ line 35) is at least 3× the national share (2.03%). The rule gives WY, WV, OK, NM, LA, KY, TX and AK. The hand list TX, OK, LA, WY, AK, NM, WV, ND is run too, because the rule includes Kentucky (coal) and leaves out North Dakota (2.7×) (D-28). Metros are dropped when the first state listed in the CBSA title is an energy state.
+- **Robustness rows (`rq0b_annual_tests.csv`):**
+  - states: without energy states (rule; hand list); income standardized within year; without WWII growth years (1940–1946); 1969–2024 only (15% and 5% trimming);
+  - metros: 5% trimming; without energy states (both lists); standardized income;
+  - five-year rolling windows (figure);
+  - decade cross-check (data test): each rolling β for a window starting in 1970, 1980, … lies inside the 95% interval of the decade β.
+- **Two scales for β:** β_before and β_after measure one-year growth, so they are about a tenth of the ten-year β. They are stored as `beta_before_annual`/`beta_after_annual` and shown ×10 as `beta_before_10y`/`beta_after_10y` next to decade results.
+- **Outputs:** figure `reports/figures/rq0b_annual_betas.png`; tables `reports/tables/rq0b_annual_tests.csv` (columns as in the spec plus `at_edge`, `reported_range`, `sup_wald_cv5` and `multi_breaks`; D-28) and `reports/tables/rq0b_annual_range_coverage.csv`.
+
 ## RQ0c — Global timing (5-year, 1950–2020)
 
 Agglomeration population growth regressed on national GDP per capita growth and the national urbanization rate. Estimated separately by peer group, with decade interactions.
@@ -97,3 +128,11 @@ Assignment rules are defined in `config.py` and recorded here once implemented. 
   - Metros (re-run after the review fixes: 1940 county codes, BIC break-date penalty, county-split decades dropped): Chow 1950 p = 0.011, 1980 p = 0.07; BIC search: 1970 (also the switch to BEA income). Standardized income: 1950 p = 0.004, break at 1970. Source-change decades (1950, 1970) dropped: 1950 p = 0.025, 1980 p = 0.015, break at 1990. 1940 missing wages excluded: 1950 p = 0.014, 1980 p = 0.08, break at 1970.
   - Caveat: in the metro 1950 Chow test the pre-break period is the 1940 decade alone, the only wage-only decade, so it can't separate a behavioral change from the change of income concept.
   - Reading: the decline in income-directed growth is clear, but its timing (1970, 1980 or 1990) is not sharply identified with decadal data.
+- **RQ0b annual, 2026-10-14 (Plan 1b; same notebook, table `reports/tables/rq0b_annual_tests.csv`, coverage `reports/tables/rq0b_annual_range_coverage.csv`, figure `reports/figures/rq0b_annual_betas.png`):**
+  - States 1929–2023 growth years, main: sup-Wald 17.8 (5% critical value 8.81), so there is a clear break. Best fit 1990, bootstrap range 1943–1990, Bai 1986–1994. Ten-year-scale β goes from 0.165 to −0.028. The bootstrap estimates split between 1990 (37%) and 1970 (30%). Multi-break search: 1940, 1955, 1990.
+  - States without energy states: 1970 for both the rule (range 1946–1990, sup-Wald 20.4) and the hand list (range 1957–1990, sup-Wald 22.1). β goes from 0.16 to −0.05. Multi-break search: 1940, 1945, 1970.
+  - States, standardized income: 1970 (range 1955–1990, sup-Wald 41.5). Without WWII years: 1990 (range 1950–1990, sup-Wald 12.2).
+  - States 1969–2023: no clear single break (sup-Wald 2.2 at 15% and 4.2 at 5%, with critical value 9.84). Best fit 1990.
+  - Metros 1969–2023: no clear single break (sup-Wald 5.5, below 8.81 at 15% and 9.84 at 5%). Best fit 1980 (range 1978–2010; 1975–2010 at 5%), with β going from −0.060 to +0.035, the opposite direction. Without energy states: best fit 2009, sup-Wald 3.0 (rule) and 2.5 (hand list). Standardized: 1980, sup-Wald 5.9. Multi-break search: 1981, 1990, 2007.
+  - Coverage: bootstrap 96% (states) and 98% (metros, above the band, so conservative); Bai 55.5% and 78%. Bootstrap ranges are reported. No estimate is at the edge.
+  - Reading: annual data confirm the break for states but can't pin down the year. It is about 1990 with all states and about 1970 without the energy states or with standardized income. Within 1969–2024 alone, neither states nor metros show a single clear break: state β rebounds for windows starting around 1980 before falling.
