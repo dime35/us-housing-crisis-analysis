@@ -171,3 +171,17 @@ def test_bootstrap_range_coverage_meets_the_rule():
     dp = simulate(lambda y: 0.03 if y < 1978 else 0.0, noise=0.05)
     cov = ab.range_coverage(dp, ab.sup_wald_break(dp), sims=200, draws=199)
     assert cov["bootstrap"] >= ab.COVERAGE_MIN, cov
+
+
+def test_demeaned_search_matches_brute_force_with_year_dummies():
+    dp = simulate(lambda y: 0.03 if y < 1968 else 0.0, n_units=20, years=range(1960, 1978))
+    fast = ab.demeaned_break_search(dp, max_breaks=2, min_segment=3)
+    slow = breaks.break_search(dp, max_breaks=2, min_segment=3, period="year")
+    assert fast.breaks == slow.breaks == (1968,)
+    assert set(fast.bic) == set(slow.bic)
+    assert all(fast.bic[k] == pytest.approx(slow.bic[k], abs=1e-6) for k in slow.bic)
+
+
+def test_demeaned_search_finds_planted_break_and_none_when_absent():
+    assert ab.demeaned_break_search(simulate(lambda y: 0.03 if y < 1978 else 0.0)).breaks == (1978,)
+    assert ab.demeaned_break_search(simulate(lambda y: 0.02)).breaks == ()

@@ -8,6 +8,7 @@ estimated on the demeaned data, and each candidate break is a closed-form fit.""
 
 from dataclasses import dataclass
 from functools import lru_cache
+from itertools import combinations
 
 import numpy as np
 import pandas as pd
@@ -248,3 +249,24 @@ def range_coverage(dp: pd.DataFrame, result: SingleBreak, sims: int = 200, draws
         hits["bootstrap"] += b.low <= result.break_year <= b.high
         hits["bai"] += lo <= result.break_year <= hi
     return {k: v / sims for k, v in hits.items()}
+
+
+def demeaned_break_search(dp: pd.DataFrame, max_breaks: int = 3, min_segment: int = 5) -> breaks.BreakSearch:
+    """breaks.break_search on annual data without the year dummies: demean once, then each set of
+    breaks costs a few cumulative-sum lookups (about 100,000 sets for states in under a second).
+    Same candidates, segment rule and BIC (the year effects still count as parameters)."""
+    periods, t, _, x, y = _arrays(dp)
+    nt, ones, n = len(periods), np.ones(len(t)), len(t)
+    xd, yd = _demean(t, x, y, ones, nt)
+    sxx, sxy, syy = _sums(t, xd, yd, ones, nt)
+    cxx, cxy = np.concatenate([[0.0], np.cumsum(sxx)]), np.concatenate([[0.0], np.cumsum(sxy)])
+    bic: dict[tuple[int, ...], float] = {}
+    for k in range(max_breaks + 1):
+        for combo in combinations(range(min_segment, nt - min_segment + 1), k):
+            edges = [0, *combo, nt]
+            if min(b - a for a, b in zip(edges[:-1], edges[1:])) < min_segment:
+                continue
+            ssr = syy.sum() - sum((cxy[b] - cxy[a]) ** 2 / (cxx[b] - cxx[a]) for a, b in zip(edges[:-1], edges[1:]))
+            # parameters: year effects + one slope per segment + the break dates (Yao 1988)
+            bic[tuple(int(periods[c]) for c in combo)] = n * np.log(ssr / n) + (nt + 2 * k + 1) * np.log(n)
+    return breaks.BreakSearch(breaks=min(bic, key=bic.get), bic=bic)
