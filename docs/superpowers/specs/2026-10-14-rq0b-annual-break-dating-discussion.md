@@ -70,4 +70,4 @@ No spec edits were made. Owner decisions still pending on everything below.
 ## Owner decisions (2026-10-14, main session)
 - Decisions 1–4: all accepted as recommended. Recorded in spec §8.
 - Edits made: §3 (D-27 drops), §4.2 (5% check, "at or before"), §4.3 (5% row), §5 (`trim` column), §6 (D-27 data test), §7 (risks row), §8, §9 (item g).
-- Items a, b, d, e: accepted and written into the spec (§4.2, §4.3, §5, §6, §7). The population-sum test now starts in 1930. Item c: owner asked for the limitations of each option before deciding.
+- Items a, b, d, e: accepted and written into the spec (§4.2, §4.3, §5, §6, §7). The population-sum test now starts in 1930. Item c: after a comparison of the options, the owner chose demeaning within year once (option 2) over brute force or Bai-Perron dynamic programming; written into §4.2 and §6.
