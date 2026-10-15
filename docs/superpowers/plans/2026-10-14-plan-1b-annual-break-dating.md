@@ -47,7 +47,7 @@
   - Denver (19740), Boulder (14500) and Greeley (24540): 2001;
   - Yuma (49740): 1982;
   - Albuquerque (10740): 1981.
-- **Coverage rule: owner decision needed before Task 5.** In a prototype with a sharp planted break, the bootstrap range had 100% coverage. That's legitimate: break years are whole numbers, so a sharp break gives a one-year range that always contains the truth. The spec's 80–97% band would wrongly reject that range. This plan implements **"at least 80%; above 97% is reported as conservative"**. If the owner keeps the spec's band instead, change `COVERAGE_MIN`/`COVERAGE_MAX` in Task 5 and the notebook's selection line.
+- **Coverage rule (owner decided 2026-10-14):** the target band is 80–97%. Below 80%, the bootstrap range isn't used and Bai's interval is reported. Above 97%, the bootstrap range is still used but noted as conservative. That happens legitimately with sharp breaks: break years are whole numbers, so a sharp break gives a one-year range that always contains the truth. Implemented as `COVERAGE_MIN`/`COVERAGE_MAX` in Task 5; the notebook table reports the coverage.
 - **Metro population check, adapted from spec §6.** In BEA's July 2020 estimates, five college-town metros are 1.6–8.5% below the April 2020 census base: Amherst, Ithaca, Tuscaloosa, Greenville NC and Corvallis. Students were away during COVID. Their July 2019 values are within 0.5%. So the data test requires each metro to be within 1% in July 2019 **or** July 2020, and the median 2020 gap to be under 0.2%. This was checked on the real data in a scratch run; every other Task 2–3 data test passed there unchanged, including the decade cross-check.
 - **Prototype checks (scratch code, 2026-10-14):**
   - The demeaned multi-break search gives identical breaks and BIC values (difference < 1e-12) to the existing brute-force search with year dummies. A full 3-break search over 95 years took 0.6 s.
@@ -970,7 +970,7 @@ Claude-Session: https://claude.ai/code/session_01WK1JcWFMpphC1KeQcaYjNr"
 
 ### Task 5: Range for the break year: bootstrap, Bai interval, coverage check
 
-*Can run in parallel with Task 6.* **Before starting, confirm the coverage rule with the owner** (see the Execution notes). The code below implements "at least 80%".
+*Can run in parallel with Task 6.* Coverage rule as decided by the owner (see the Execution notes).
 
 **Files:**
 - Modify: `us_housing_crisis_analysis/modeling/annual_breaks.py`, `tests/test_annual_breaks.py`, `pyproject.toml`, `Makefile`
