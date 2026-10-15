@@ -56,11 +56,60 @@ OIL_YEARS = (1973, 1990)
 OIL_YEARS_SHORT = (1973, 1986)
 GATEWAY_STATES = ("06", "36", "34", "17", "12", "48")
 
-# County net migration by decade (Plan 1c): UW-Madison Applied Population Laboratory series. Keys
-# are the decade start (1950 = 1950-60). Files sit unopened in data/raw/netmig/. The 2010s entry was
-# checked on 2026-10-15; the ICPSR decades were recorded in Plan 1c Task 3 Step 5.
+# County net migration by decade (Plan 1c): the UW-Madison Applied Population Laboratory series and
+# its predecessors (ICPSR collection 2760). Keys are the decade start (1950 = 1950-60). Files sit
+# unopened in data/raw/netmig/ under ICPSR's own zip names. File, member and column names were
+# checked against each study's codebook on 2026-10-15. total_col is net migration of all ages, both
+# sexes and all races, including the cohorts born during the decade (ages 0-9 at its end);
+# "a+b+..." sums groups that partition the population. Counties are identified by fips_col (5-digit
+# FIPS) or by state_col + county_col; state_codes="uga" maps the old 2-52 state codes to FIPS.
+# colspecs reads a fixed-width member: "name:start-end,..." with 0-based, half-open positions.
+# County codes are FIPS in the state part for every decade, but NOT always in the county part:
+#   1950s, 1960s: the county part is the files' own sequence number (CNTYNO), not FIPS.
+#   1970s: FIPS, except Virginia (the files' own unit numbers 1-96, some units merge cities and
+#     counties), Alaska and Hawaii (one unit each, coded 001), Baltimore city (24007), St. Louis
+#     city (29191), Ste. Genevieve (29193), and a few merged units (codebook section 2).
+#   1990s: FIPS, except 12 merged units coded xx9xx (codebook Appendix 2).
+# Only the state part is used downstream (states sum their counties).
+_AGES_1980 = ["04", "59", "104", "159", "204", "259", "304", "359", "404", "459", "504", "559",
+              "604", "659", "704", "759", "804", "85U"]
 NETMIG_DECADES = range(1950, 2011, 10)
 NETMIG_FILES: dict[int, dict[str, str]] = {
+    # ICPSR 8493 (Bowles, Tarver, Beale, Lee), DS0001: V532 = net migration 1950-60, all ages,
+    # total. LEVELID is the UGA state code, CNTYNO the county number (0 on state rows)
+    1950: {"file": "ICPSR_08493-V2.zip", "member": "ICPSR_08493/DS0001/08493-0001-Data.dta",
+           "state_col": "LEVELID", "state_codes": "uga", "county_col": "CNTYNO",
+           "name_col": "CNTYNAME", "total_col": "V532"},
+    # ICPSR 8493, DS0002: V532 = net migration 1960-70, all ages, total
+    1960: {"file": "ICPSR_08493-V2.zip", "member": "ICPSR_08493/DS0002/08493-0002-Data.dta",
+           "state_col": "LEVELID", "state_codes": "uga", "county_col": "CNTYNO",
+           "name_col": "CNTYNAME", "total_col": "V532"},
+    # ICPSR 8697 (White, Mueser, Tierney), ASCII only; codebook section 3.2: NMETOTAL = total net
+    # migration estimate (columns 3007-3015, 1-based), FIPSTATE 7-9, FIPSCNTY 10-12, NAME 16-42
+    1970: {"file": "ICPSR_08697-V1.zip", "member": "ICPSR_08697/DS0001/08697-0001-Data.txt",
+           "colspecs": "FIPSTATE:6-9,FIPSCNTY:9-12,NAME:15-42,NMETOTAL:3006-3015",
+           "state_col": "FIPSTATE", "county_col": "FIPSCNTY", "name_col": "NAME",
+           "total_col": "NMETOTAL"},
+    # ICPSR 26761 (Fuguitt, Beale, Voss): the sum of the 36 male and female age groups AM..M89 and
+    # AM..F89. The all-ages totals (AMTOTT89, AMTOTM89, AMTOTF89) lose two digits in the largest
+    # counties (Cook County: -5,174 for -517,403), and AM804T89 (both sexes 80-84) does not equal
+    # male + female.
+    1980: {"file": "ICPSR_26761-V1.zip", "member": "ICPSR_26761/DS0001/26761-0001-Data.dta",
+           "fips_col": "FIPS", "name_col": "COUNTY",
+           "total_col": "+".join(f"AM{age}{sex}89" for sex in "MF" for age in _AGES_1980)},
+    # ICPSR 4171 (Voss, McNiven, Hammer, Johnson, Fuguitt), ASCII only, no names. The codebook
+    # lists the 1726 variables in file order (Appendix 4) without positions, and the setup files
+    # are not in the zip. Field ends come from the file (the same 1726 ends on every record):
+    # NMG_TT_T, net migration 1990-2000, is field 1441
+    1990: {"file": "ICPSR_04171-V1.zip", "member": "ICPSR_04171/DS0001/04171-0001-Data.txt",
+           "colspecs": "FIPS:0-5,NMG_TT_T:7725-7732", "fips_col": "FIPS",
+           "total_col": "NMG_TT_T"},
+    # ICPSR 34638 (Winkler, Johnson, Cheng, Voss, Curtis). No all-ages column: the sum of the 18
+    # age groups M0TTT0-M0TTT85 (total race, both sexes). FIPS3188 has xx000 state-total rows
+    2000: {"file": "ICPSR_34638-V1.zip", "member": "ICPSR_34638/DS0001/34638-0001-Data.dta",
+           "fips_col": "FIPS3188", "name_col": "CTYNAME",
+           "total_col": "+".join(f"M0TTT{age}" for age in range(0, 90, 5))},
+    # APL download: m1tttt = net migration 2010-20, all ages, both sexes, all races
     2010: {"file": "NME_1020_data.zip", "member": "NME_1020_data.csv", "fips_col": "fips_str2020",
            "name_col": "CoName2020", "total_col": "m1tttt"},
 }

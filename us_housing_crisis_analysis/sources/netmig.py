@@ -12,6 +12,7 @@ import zipfile
 import pandas as pd
 
 from us_housing_crisis_analysis.config import NETMIG_FILES, RAW_DATA_DIR
+from us_housing_crisis_analysis.geography import STATE_ABBR_TO_FIPS
 from us_housing_crisis_analysis.schema import validate_long
 from us_housing_crisis_analysis.sources._http import download_file
 from us_housing_crisis_analysis.sources.icpsr import MissingManualDownloadError
@@ -41,29 +42,71 @@ def download(force: bool = False) -> list[Path]:
     return paths
 
 
-def _read(path: Path, member: str) -> pd.DataFrame:
+# State codes 2-52 of the Bowles / Tarver / Beale / Lee files (ICPSR 8493; "UGA" codes, ICPSR 8697
+# codebook Table 1) number the 50 states and DC alphabetically, which is also the FIPS order.
+UGA_STATE_FIPS = dict(zip(range(2, 53), sorted(set(STATE_ABBR_TO_FIPS.values()) - {"72"})))
+
+
+def _read(path: Path, member: str, colspecs: str | None = None) -> pd.DataFrame:
+    """colspecs reads a fixed-width member: "name:start-end,..." with 0-based, half-open positions."""
     with zipfile.ZipFile(path) as zf:
         raw = zf.read(member)
+    if colspecs:
+        fields = [item.split(":") for item in colspecs.split(",")]
+        spans = [tuple(int(x) for x in span.split("-")) for _, span in fields]
+        return pd.read_fwf(
+            io.BytesIO(raw), colspecs=spans, names=[n for n, _ in fields], header=None, dtype=str
+        )
     suffix = Path(member).suffix.lower()
     if suffix == ".dta":
         return pd.read_stata(io.BytesIO(raw), convert_categoricals=False)
-    return pd.read_csv(io.BytesIO(raw), sep="\t" if suffix in (".tsv", ".tab", ".txt") else ",", dtype=str)
+    return pd.read_csv(
+        io.BytesIO(raw), sep="\t" if suffix in (".tsv", ".tab", ".txt") else ",", dtype=str
+    )
+
+
+def _code(col: pd.Series) -> pd.Series:
+    """Numeric code as a digit string ("" if missing); Stata stores codes as numbers, maybe floats."""
+    return col.astype(str).str.strip().str.replace(r"\.0$", "", regex=True).where(col.notna(), "")
+
+
+def _county_fips(raw: pd.DataFrame, spec: dict[str, str]) -> pd.Series:
+    """5-digit county code: one fips_col, or state_col + county_col (state_codes="uga" maps UGA codes)."""
+    if "fips_col" in spec:
+        return _code(raw[spec["fips_col"]]).str.zfill(5)
+    state = _code(raw[spec["state_col"]])
+    if spec.get("state_codes") == "uga":
+        state = state.map(lambda c: UGA_STATE_FIPS.get(int(c), "") if c.isdigit() else "")
+    county = _code(raw[spec["county_col"]])
+    # A missing part stays empty (not zero-padded), so the row fails the 5-digit check and drops
+    return state.str.zfill(2).where(state != "", "") + county.str.zfill(3).where(county != "", "")
 
 
 def parse_net_migration(path: Path, decade: int, spec: dict[str, str]) -> pd.DataFrame:
-    raw = _read(path, spec["member"])
-    fips = raw[spec["fips_col"]].astype(str).str.strip().str.replace(r"\.0$", "", regex=True).str.zfill(5)
+    raw = _read(path, spec["member"], spec.get("colspecs"))
+    fips = _county_fips(raw, spec)
     cols = spec["total_col"].split("+")
     value = raw[cols].apply(pd.to_numeric, errors="coerce").sum(axis=1, min_count=len(cols))
     # County rows only: xx000 rows are state totals and 00000 the US; never add them to counties
     keep = fips.str.fullmatch(r"\d{5}") & ~fips.str.endswith("000") & value.notna()
-    return pd.DataFrame(
-        {
-            "geo_id": "county:" + fips[keep], "geo_name": raw.loc[keep, spec["name_col"]].astype(str),
-            "geo_level": "county", "country_iso3": "USA", "year": decade, "variable": "net_migration",
-            "value": value[keep].astype("float64"), "unit": "persons", "source": "netmig",
-        }
-    ).astype({"year": "int64"}).reset_index(drop=True)
+    name = raw[spec["name_col"]].astype(str).str.strip() if "name_col" in spec else fips
+    return (
+        pd.DataFrame(
+            {
+                "geo_id": "county:" + fips[keep],
+                "geo_name": name[keep],
+                "geo_level": "county",
+                "country_iso3": "USA",
+                "year": decade,
+                "variable": "net_migration",
+                "value": value[keep].astype("float64"),
+                "unit": "persons",
+                "source": "netmig",
+            }
+        )
+        .astype({"year": "int64"})
+        .reset_index(drop=True)
+    )
 
 
 def load() -> pd.DataFrame:
