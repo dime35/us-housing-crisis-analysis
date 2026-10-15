@@ -1,7 +1,7 @@
 # Design: Dating the RQ0b break with annual data (Plan 1b)
 
 - **Date:** 2026-10-14
-- **Status:** Draft, awaiting user review
+- **Status:** Approved by the owner, 2026-10-14
 - **Extends:** `2026-10-08-housing-growth-mismatch-design.md` (§2 RQ0b, §4 panels, §5 methods, §10 build order)
 - **Builds on:** Plan 1 (branch `plan-1-rq0b`), decisions D-20 to D-25
 
