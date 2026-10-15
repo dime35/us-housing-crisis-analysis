@@ -6,8 +6,8 @@ import typer
 
 from us_housing_crisis_analysis.config import (
     CROSSWALKS_DIR, ENERGY_SHARE_MULTIPLE, ENERGY_SHARE_YEAR, INTERIM_DATA_DIR, METRO_LONGRUN_START,
-    PROCESSED_DATA_DIR, RQ0B_ANNUAL_END, RQ0B_ANNUAL_METRO_START, RQ0B_ANNUAL_STATE_START, RQ0B_END,
-    RQ0B_STATE_START,
+    NETMIG_DECADES, PROCESSED_DATA_DIR, RQ0B_ANNUAL_END, RQ0B_ANNUAL_METRO_START,
+    RQ0B_ANNUAL_STATE_START, RQ0B_END, RQ0B_STATE_START,
 )
 from us_housing_crisis_analysis.geography import (
     county_to_cbsa, first_listed_state_fips, harmonize_county_fips,
@@ -267,10 +267,31 @@ def drop_states(panel: pd.DataFrame, fips: set[str]) -> pd.DataFrame:
     return panel[~state.isin(fips)]
 
 
+def build_us_state_net_migration(longrun: pd.DataFrame, netmig: pd.DataFrame) -> pd.DataFrame:
+    """State x decade (Plan 1c): census population at both ends, income at the start, county net
+    migration summed to the state. Rates are simple percent changes of the starting population,
+    so total = migration + natural increase exactly. A state missing net migration for a decade
+    drops out of that decade only."""
+    nm = netmig[(netmig.variable == "net_migration") & (netmig.geo_level == "county")]
+    nm = (nm.assign(geo_id="state:" + nm.geo_id.str[7:9]).groupby(["geo_id", "year"], as_index=False)["value"].sum()
+          .rename(columns={"value": "net_migration"}))
+    p = longrun[["geo_id", "geo_name", "year", "population", "income_pc"]]
+    nxt = p[["geo_id", "year", "population"]].assign(year=p.year - 10).rename(columns={"population": "population_next"})
+    m = p.merge(nxt, on=["geo_id", "year"]).merge(nm, on=["geo_id", "year"])
+    m = m[m.year.isin(list(NETMIG_DECADES)) & (m.population > 0)]
+    total = (m.population_next - m.population) / m.population
+    migration = m.net_migration / m.population
+    out = m.rename(columns={"year": "decade"}).assign(
+        total_rate=total, migration_rate=migration, natural_rate=total - migration)
+    cols = ["geo_id", "geo_name", "decade", "population", "population_next", "income_pc", "net_migration",
+            "total_rate", "migration_rate", "natural_rate"]
+    return out[cols].sort_values(["geo_id", "decade"]).reset_index(drop=True)
+
+
 @app.command()
 def main():
     read = lambda s: pd.read_parquet(INTERIM_DATA_DIR / f"{s}.parquet")  # noqa: E731
-    nhgis, bea, manual, ipums, icpsr = (read(s) for s in ("nhgis", "bea", "manual", "ipums", "icpsr"))
+    nhgis, bea, manual, ipums, icpsr, netmig = (read(s) for s in ("nhgis", "bea", "manual", "ipums", "icpsr", "netmig"))
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     panels = {
         "us_state_longrun": build_us_state_longrun(nhgis, bea, manual),
@@ -278,8 +299,9 @@ def main():
         "us_state_annual": build_us_state_annual(bea),
         "us_metro_annual": build_us_metro_annual(bea, county_to_cbsa()),
     }
+    panels["us_state_net_migration"] = build_us_state_net_migration(panels["us_state_longrun"], netmig)
     for name, df in panels.items():
-        if df.duplicated(["geo_id", "year"]).any():
+        if df.duplicated(["geo_id", "decade" if "decade" in df else "year"]).any():
             raise ValueError(f"{name}: duplicate (geo_id, year) rows")
         df.to_parquet(PROCESSED_DATA_DIR / f"{name}.parquet", index=False)
         logger.success(f"{name}: {len(df):,} rows, {df.geo_id.nunique()} units")
