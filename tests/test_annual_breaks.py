@@ -73,3 +73,62 @@ def test_window_panel_skips_windows_containing_a_flagged_step():
     starts_u0 = set(w.loc[w.geo_id == "u0", "start"])
     assert starts_u0 == {1990, 1991}  # windows starting 1992-2000 contain the 2001 step
     assert set(w.loc[w.geo_id == "u1", "start"]) == set(range(1990, 2001))
+
+
+def test_andrews_critical_values_match_the_published_table():
+    # Andrews (1993) Table 1, one restriction, 5% level
+    assert ab.andrews_critical_value(0.15) == pytest.approx(8.85, abs=0.15)
+    assert ab.andrews_critical_value(0.05) == pytest.approx(9.84, abs=0.15)
+
+
+def test_candidate_years_follow_the_trimming():
+    states, metros = list(range(1929, 2024)), list(range(1969, 2024))
+    assert states[ab.candidate_positions(len(states), 0.15)[0]] == 1943
+    assert metros[ab.candidate_positions(len(metros), 0.15)[0]] == 1977
+    assert metros[ab.candidate_positions(len(metros), 0.05)[0]] == 1971
+
+
+def test_wald_matches_statsmodels_with_year_dummies():
+    dp = simulate(lambda y: 0.03 if y < 1978 else 0.0, n_units=30, years=range(1960, 1995), noise=0.02)
+    assert ab.wald_statistic(dp, 1978) == pytest.approx(breaks.chow_test(dp, 1978, period="year").statistic, rel=1e-8)
+
+
+def test_planted_1978_break_is_found_and_significant():
+    r = ab.sup_wald_break(simulate(lambda y: 0.03 if y < 1978 else 0.0, noise=0.02))
+    assert abs(r.break_year - 1978) <= 2
+    assert r.sup_wald > r.critical_value
+    assert r.beta_before == pytest.approx(0.03, abs=0.01) and r.beta_after == pytest.approx(0.0, abs=0.01)
+    assert not r.at_edge and r.first_candidate == 1943
+
+
+def test_no_planted_break_is_not_significant():
+    r = ab.sup_wald_break(simulate(lambda y: 0.02, noise=0.05))
+    assert r.sup_wald < r.critical_value
+
+
+def test_break_before_the_first_candidate_is_flagged_at_edge():
+    r = ab.sup_wald_break(simulate(lambda y: 0.03 if y < 1972 else 0.0, years=range(1969, 2024)))
+    assert r.break_year == 1977 and r.at_edge
+
+
+def oil_cycle(n_units=50, n_energy=10, seed=0, noise=0.01):
+    """No change in behavior; energy units get an income boom (1973-81) and bust (1982-90) with
+    growth following oil jobs rather than income."""
+    rng = np.random.default_rng(seed)
+    base = rng.normal(0, 0.3, n_units)
+    energy = np.arange(n_units) < n_energy
+    rows = []
+    for y in range(1969, 2024):
+        cycle = 0.3 if 1973 <= y <= 1981 else (-0.3 if 1982 <= y <= 1990 else 0.0)
+        x = base + rng.normal(0, 0.05, n_units) + energy * cycle
+        g = 0.02 * x + energy * np.sign(cycle) * 0.03 + rng.normal(0, noise, n_units)
+        rows.append(pd.DataFrame({"geo_id": [f"u{i}" for i in range(n_units)], "year": y,
+                                  "log_income": x, "growth": g, "energy": energy}))
+    return pd.concat(rows, ignore_index=True)
+
+
+def test_oil_cycle_breaks_the_full_panel_but_not_the_one_without_energy_units():
+    dp = oil_cycle()
+    assert ab.sup_wald_break(dp).sup_wald > ab.andrews_critical_value(0.15)
+    without = ab.sup_wald_break(dp[~dp.energy])
+    assert without.sup_wald < without.critical_value
