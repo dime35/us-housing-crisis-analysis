@@ -321,7 +321,10 @@ def test_betas_add_up_across_outcomes():
 
 
 def test_share_range_skips_degenerate_draws():
-    # one unit only has the "after" period, so some draws leave the middle period empty
+    # one unit only has years from 1990, so before 1990 a draw can contain a single distinct unit;
+    # income then has no variation within year, the share is NaN and the range skips it
     dp = state_panel(STEP_1970, n_units=6, years=range(1960, 2000))
-    low, high, draws = ab.share_range(dp, draws=99)
-    assert np.isfinite(low) and np.isfinite(high) and len(draws) == 99
+    dp = dp[~((dp.geo_id == "state:06") & (dp.year < 1990))]
+    low, high, draws = ab.share_range(dp, draws=999)
+    assert len(draws) == 999 and np.isnan(draws).any()
+    assert np.isfinite(low) and np.isfinite(high)
