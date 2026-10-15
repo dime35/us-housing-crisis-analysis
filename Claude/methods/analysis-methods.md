@@ -24,7 +24,7 @@ For each decade d, with i a state or a metro:
 
 Growth runs from the start of decade d to the start of the next; income is measured at the start of decade d, so it precedes the growth it explains.
 
-- β_d > 0 means population flows toward richer places. A falling β_d means that flow is weakening.
+- β_d > 0 means richer places grow faster. A falling β_d means that link is weakening. Growth counts births and deaths as well as moves, so β_d alone doesn't show people *moving* toward richer places; Plan 1c (`docs/superpowers/specs/2026-10-15-rq0b-1970-vs-1990-design.md`) splits growth into net migration and natural increase.
 - **Start-year rule:** each version starts at the first decade from which income exists for every decade onward. No decade is interpolated.
 - **Income, state version (1880–2020):** Klein (1880, 1890, 1900, 1910); Easterlin (1920); BEA state personal income per capita (annual from 1929; decade years 1930+ are used). Territories take their later state's ID where boundaries already matched (`territory_to_state.csv`, see `geography.md`), so Arizona, Idaho, Montana, New Mexico, Utah, Washington and Wyoming are in the 1880 panel (and Alaska and Hawaii from 1950, when BEA data begins). States with income: 45 (1880), 47 (1890), 48 (1900–1920), 49 (1930–1940), 51 (1950+).
 - **Income, metro version (1940–2020):** 1940 full-count census wage and salary income (IPUMS), aggregated county → CBSA; Census county median family income for 1950 and 1960 (1949 and 1959 income), from the County Data Books in ICPSR 2896 (Haines), with NHGIS table NT39 as a cross-check for 1950; BEA personal income per capita (1969, used for 1970, onward).

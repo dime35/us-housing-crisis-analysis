@@ -214,6 +214,17 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Why:** each call keeps the method as the approved Plan 1b spec describes it and records where the data forced a choice. The methods are in `analysis-methods.md` (RQ0b — annual break dating).
 - **Alternatives:** the hand list only (the rule is reproducible and was approved first); the legal split years (they don't match what the BEA data shows); Bai's interval as the main range (its simulated coverage is 55–78%).
 
+### D-29 · Wording of the RQ0b finding, and standards for future designs
+- **Decision:**
+  - **Wording:** RQ0b findings say "population growth stopped following income" (richer places no longer grow faster), not "people stopped moving toward richer places". Total growth includes births and deaths; the moving claim waits for Plan 1c's net-migration split.
+  - **Standards for every new design spec:**
+    - (a) a decision rule fixed before anything is run, including a "can't tell" outcome;
+    - (b) for each confound, which way it could push the result, without assuming a direction;
+    - (c) whether the change could be gradual rather than a single break;
+    - (d) no fit-score (BIC/AIC) comparison as a headline test on panel data whose observations are correlated within units. Use inference that allows for that correlation (clustered tests, unit resampling).
+- **Why:** a design review of Plan 1c (2026-10-15) found these gaps in Plans 1 and 1b. They change no reported numbers, but the earlier write-ups overstated the moving interpretation, and the multi-break BIC searches deserve less weight than they got.
+- **Decided by:** user, 2026-10-15 (proposed by Claude).
+
 ## Open items
 - Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27).
 - Plan 1b (annual break dating) is complete on branch `plan-1b-annual-breaks` (D-28). Finding: annual data confirm the state break but can't pin down the year (about 1990 with all states, about 1970 without the energy states). Next is Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits. RQ0c (global timing) is in design.
