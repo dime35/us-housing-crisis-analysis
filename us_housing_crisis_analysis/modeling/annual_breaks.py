@@ -12,7 +12,9 @@ from itertools import combinations, pairwise
 
 import numpy as np
 import pandas as pd
+from scipy.stats import chi2
 
+from us_housing_crisis_analysis.config import OIL_YEARS, RQ0B_CUTS
 from us_housing_crisis_analysis.modeling import breaks
 
 
@@ -84,6 +86,31 @@ def candidate_positions(n_periods: int, trim: float) -> np.ndarray:
     return np.arange(k, n_periods - k + 1)
 
 
+def _cell_codes(dp: pd.DataFrame, period: str, cell: str | None) -> tuple[np.ndarray, int]:
+    """Each row's fixed-effect cell (the period itself when cell is None) and the number of cells.
+    A cell must lie inside one period, so demeaning within cells keeps the period slopes exact."""
+    col = dp[period] if cell is None else dp[cell]
+    codes, uniques = pd.factorize(col, sort=True)
+    if cell is not None and dp.groupby(cell)[period].nunique().max() > 1:
+        raise ValueError(f"cells in {cell!r} span more than one {period}")
+    return codes, len(uniques)
+
+
+def oil_cells(dp: pd.DataFrame, energy_fips, years: tuple[int, int] = OIL_YEARS, period: str = "year") -> pd.DataFrame:
+    """cell = the period, except energy states during the oil years, which get their own cell (e.g.
+    "1980E"), so the oil boom and bust can't show up as a change in beta."""
+    in_oil = dp.geo_id.str[6:8].isin(set(energy_fips)) & dp[period].between(*years)
+    return dp.assign(cell=dp[period].astype(str) + np.where(in_oil, "E", ""))
+
+
+def division_cells(dp: pd.DataFrame, divisions: pd.Series, period: str = "year") -> pd.DataFrame:
+    """cell = period x census division: states are compared only within their own region."""
+    division = dp.geo_id.str[6:8].map(divisions)
+    if division.isna().any():
+        raise ValueError(f"no division for {sorted(dp.geo_id[division.isna()].unique())}")
+    return dp.assign(cell=dp[period].astype(str) + "-" + division.astype(int).astype(str))
+
+
 def _arrays(dp: pd.DataFrame, period: str = "year"):
     """Sorted periods, each row's period position, unit codes, log income and growth."""
     periods = np.sort(dp[period].unique())
@@ -115,12 +142,12 @@ def _ssr_candidates(sxx, sxy, syy, cand):
         return syy.sum() - bxy**2 / bxx - axy**2 / axx, bxy / bxx, axy / axx
 
 
-def _cluster_wald(t, g, xd, yd, c, b1, b2, n_periods) -> float:
+def _cluster_wald(t, g, xd, yd, c, b1, b2, n_fe) -> float:
     """Wald statistic for slope before = slope after, clustered by unit, with statsmodels'
-    small-sample factor G/(G-1) * (N-1)/(N-K), K counting the period dummies."""
+    small-sample factor G/(G-1) * (N-1)/(N-K), K counting the fixed-effect dummies."""
     before = t < c
     e = yd - np.where(before, b1, b2) * xd
-    n_units, n, k = g.max() + 1, len(t), n_periods + 2
+    n_units, n, k = g.max() + 1, len(t), n_fe + 2
     u1 = np.bincount(g, np.where(before, xd * e, 0.0), n_units)
     u2 = np.bincount(g, np.where(before, 0.0, xd * e), n_units)
     s1, s2 = (xd[before] ** 2).sum(), (xd[~before] ** 2).sum()
@@ -156,15 +183,17 @@ class SingleBreak:
     last_year: int
 
 
-def sup_wald_break(dp: pd.DataFrame, trim: float = 0.15) -> SingleBreak:
+def sup_wald_break(dp: pd.DataFrame, trim: float = 0.15, cell: str | None = None) -> SingleBreak:
     """Break year = lowest SSR over candidates (Bai-Perron); significance = the largest clustered
-    Wald statistic over the same candidates, against Andrews' critical value."""
+    Wald statistic over the same candidates, against Andrews' critical value. cell: an optional
+    fixed-effect column finer than the year (oil_cells, division_cells)."""
     periods, t, g, x, y = _arrays(dp)
+    cc, ncell = _cell_codes(dp, "year", cell)
     nt, ones = len(periods), np.ones(len(t))
-    xd, yd = _demean(t, x, y, ones, nt)
+    xd, yd = _demean(cc, x, y, ones, ncell)
     cand = candidate_positions(nt, trim)
     ssr, b1, b2 = _ssr_candidates(*_sums(t, xd, yd, ones, nt), cand)
-    wald = [_cluster_wald(t, g, xd, yd, c, s1, s2, nt) for c, s1, s2 in zip(cand, b1, b2)]
+    wald = [_cluster_wald(t, g, xd, yd, c, s1, s2, ncell) for c, s1, s2 in zip(cand, b1, b2)]
     j = int(np.nanargmin(ssr))
     return SingleBreak(
         break_year=int(periods[cand[j]]), at_edge=j == 0, sup_wald=float(max(wald)),
@@ -189,25 +218,26 @@ class BreakRange:
     estimates: np.ndarray
 
 
-def _estimate(t, x, y, w, nt, cand) -> int:
-    """Position of the best-fitting break with rows weighted by w."""
-    xd, yd = _demean(t, x, y, w, nt)
+def _estimate(cc, ncell, t, x, y, w, nt, cand) -> int:
+    """Position of the best-fitting break with rows weighted by w (demeaned within cells)."""
+    xd, yd = _demean(cc, x, y, w, ncell)
     ssr, _, _ = _ssr_candidates(*_sums(t, xd, yd, w, nt), cand)
     return int(cand[int(np.nanargmin(ssr))])
 
 
 def bootstrap_break_year(dp: pd.DataFrame, trim: float = 0.15, draws: int = 999,
-                         level: float = 0.90, seed: int = 0) -> BreakRange:
+                         level: float = 0.90, seed: int = 0, cell: str | None = None) -> BreakRange:
     """Resample whole units with replacement (keeping each unit's years together), re-estimate
     the break year each time, and return the middle `level` share of the estimates."""
     periods, t, g, x, y = _arrays(dp)
+    cc, ncell = _cell_codes(dp, "year", cell)
     nt, n_units = len(periods), g.max() + 1
     cand = candidate_positions(nt, trim)
     rng = np.random.default_rng(seed)
     est = np.empty(draws, dtype=int)
     for d in range(draws):
         w = np.bincount(rng.integers(0, n_units, n_units), minlength=n_units)[g].astype(float)
-        est[d] = periods[_estimate(t, x, y, w, nt, cand)]
+        est[d] = periods[_estimate(cc, ncell, t, x, y, w, nt, cand)]
     a = (1 - level) / 2
     return BreakRange(int(np.floor(np.quantile(est, a))), int(np.ceil(np.quantile(est, 1 - a))), est)
 
@@ -270,3 +300,96 @@ def demeaned_break_search(dp: pd.DataFrame, max_breaks: int = 3, min_segment: in
             # parameters: year effects + one slope per segment + the break dates (Yao 1988)
             bic[tuple(int(periods[c]) for c in combo)] = n * np.log(ssr / n) + (nt + 2 * k + 1) * np.log(n)
     return breaks.BreakSearch(breaks=min(bic, key=bic.get), bic=bic)
+
+
+@dataclass(frozen=True)
+class ThreePeriod:
+    beta_pre: float  # before cuts[0]
+    beta_mid: float  # cuts[0] .. cuts[1] - 1
+    beta_post: float  # from cuts[1]
+    share: float  # (pre - mid) / (pre - post): 0 = middle looks like before, 1 = like after
+    p_pre_post: float  # the guard: did anything change at all?
+    p_mid_pre: float
+    p_mid_post: float
+    wald_pre_post: float
+    wald_mid_pre: float
+    wald_mid_post: float
+    n_units: int
+    n_obs: int
+
+
+def _segments(dp: pd.DataFrame, period: str, cuts) -> np.ndarray:
+    return np.searchsorted(np.asarray(cuts), dp[period].to_numpy(), side="right")
+
+
+def _three_betas(seg, x, xd, yd, w):
+    """Slope per period on demeaned data. A period with no x-variation gives NaN: no weight, or
+    one distinct unit drawn several times, whose demeaned x is only rounding residue (sxx about
+    1e-33), so sxx is compared with the period's sum of squares of x before demeaning."""
+    sxx, sxy = np.bincount(seg, w * xd * xd, 3), np.bincount(seg, w * xd * yd, 3)
+    degenerate = sxx <= 1e-12 * np.bincount(seg, w * x * x, 3)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.where(degenerate, np.nan, sxy / sxx), sxx
+
+
+def _share(b) -> float:
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return float((b[0] - b[1]) / (b[0] - b[2]))
+
+
+def three_period(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: str | None = None) -> ThreePeriod:
+    """Income slope before cuts[0], between the cuts, and from cuts[1], with fixed effects for
+    each cell (the period by default), standard errors clustered by unit, statsmodels'
+    small-sample factor, and chi-square(1) p-values (as wald_test(..., use_f=False))."""
+    cc, ncell = _cell_codes(dp, period, cell)
+    g = pd.factorize(dp.geo_id)[0]
+    x, y = dp.log_income.to_numpy(float), dp.growth.to_numpy(float)
+    ones = np.ones(len(x))
+    xd, yd = _demean(cc, x, y, ones, ncell)
+    seg = _segments(dp, period, cuts)
+    b, sxx = _three_betas(seg, x, xd, yd, ones)
+    e = yd - b[seg] * xd
+    n_units, n, k = g.max() + 1, len(x), ncell + 3
+    scores = np.column_stack([np.bincount(g, np.where(seg == s, xd * e, 0.0), n_units) for s in range(3)])
+    cov = n_units / (n_units - 1) * (n - 1) / (n - k) * (scores.T @ scores) / np.outer(sxx, sxx)
+
+    def wald(a):
+        a = np.asarray(a, float)
+        stat = float((a @ b) ** 2 / (a @ cov @ a))
+        return stat, float(chi2.sf(stat, 1))
+
+    (w_pp, p_pp), (w_mpre, p_mpre), (w_mpost, p_mpost) = wald([1, 0, -1]), wald([-1, 1, 0]), wald([0, 1, -1])
+    return ThreePeriod(float(b[0]), float(b[1]), float(b[2]), _share(b), p_pp, p_mpre, p_mpost,
+                       w_pp, w_mpre, w_mpost, int(n_units), int(n))
+
+
+def share_range(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: str | None = None,
+                draws: int = 999, level: float = 0.90, seed: int = 0) -> tuple[float, float, np.ndarray]:
+    """Middle `level` range of the share over unit-bootstrap draws (whole units resampled, years
+    kept together). Draws where a period has no x-variation give NaN and are skipped."""
+    cc, ncell = _cell_codes(dp, period, cell)
+    g = pd.factorize(dp.geo_id)[0]
+    n_units = g.max() + 1
+    x, y = dp.log_income.to_numpy(float), dp.growth.to_numpy(float)
+    seg = _segments(dp, period, cuts)
+    rng = np.random.default_rng(seed)
+    shares = np.empty(draws)
+    for d in range(draws):
+        w = np.bincount(rng.integers(0, n_units, n_units), minlength=n_units)[g].astype(float)
+        xd, yd = _demean(cc, x, y, w, ncell)
+        shares[d] = _share(_three_betas(seg, x, xd, yd, w)[0])
+    a = (1 - level) / 2
+    return float(np.nanquantile(shares, a)), float(np.nanquantile(shares, 1 - a)), shares
+
+
+def decide(low: float, high: float, p_pre_post: float, cuts=RQ0B_CUTS, alpha: float = 0.05) -> str:
+    """The Plan 1c rule, fixed before running (spec §4.1): which period 1970-89 resembles."""
+    if not p_pre_post < alpha:
+        return "can't tell"
+    if low > 0 and high >= 1:
+        return str(cuts[0])
+    if low <= 0 and high < 1:
+        return str(cuts[1])
+    if low > 0 and high < 1:
+        return "gradual"
+    return "can't tell"

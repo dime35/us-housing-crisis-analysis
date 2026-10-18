@@ -183,3 +183,19 @@ def test_drop_states_for_states_and_metros():
                            "geo_name": ["Dallas-Fort Worth-Arlington, TX", "Baltimore-Columbia-Towson, MD"]})
     assert features.drop_states(states, {"48"}).geo_id.tolist() == ["state:24"]
     assert features.drop_states(metros, {"48"}).geo_id.tolist() == ["cbsa:12580"]
+
+
+def test_state_net_migration_panel_rates_add_up_and_gaps_stay_out():
+    longrun = pd.DataFrame({"geo_id": ["state:24"] * 3 + ["state:11"] * 3, "geo_name": ["MD"] * 3 + ["DC"] * 3,
+                            "year": [1950, 1960, 1970] * 2, "population": [100.0, 120.0, 130.0, 50.0, 55.0, 60.0],
+                            "income_pc": [10.0, 11.0, 12.0, 20.0, 21.0, 22.0], "income_source": "bea"})
+    netmig = long([("county:24510", "county", 1950, "net_migration", 5.0),
+                   ("county:24005", "county", 1950, "net_migration", 3.0),
+                   ("county:24510", "county", 1960, "net_migration", -2.0),
+                   ("county:11001", "county", 1950, "net_migration", 1.0)], "netmig")  # DC 1960 missing
+    p = features.build_us_state_net_migration(longrun, netmig).set_index(["geo_id", "decade"])
+    md = p.loc[("state:24", 1950)]
+    assert md.net_migration == 8.0 and md.total_rate == pytest.approx(0.2) and md.migration_rate == pytest.approx(0.08)
+    assert md.natural_rate == pytest.approx(0.12) and md.income_pc == 10.0
+    assert ("state:11", 1960) not in p.index  # missing net migration: dropped, never zero
+    assert ("state:24", 1970) not in p.index  # no population at the end of the decade

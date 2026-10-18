@@ -51,3 +51,9 @@ def test_first_listed_state_fips():
     titles = pd.Series(["Dallas-Fort Worth-Arlington, TX", "New York-Newark-Jersey City, NY-NJ",
                         "Cheyenne, WY", "Aguadilla, PR"])
     assert geo.first_listed_state_fips(titles).tolist() == ["48", "36", "56", "72"]
+
+
+def test_state_divisions():
+    d = geo.state_divisions()
+    assert len(d) == 51 and set(d) == set(range(1, 10))
+    assert d["06"] == 9 and d["36"] == 2 and d["48"] == 7 and d["11"] == 5
