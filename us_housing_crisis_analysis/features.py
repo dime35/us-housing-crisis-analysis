@@ -5,10 +5,13 @@ from loguru import logger
 import typer
 
 from us_housing_crisis_analysis.config import (
-    CROSSWALKS_DIR, INTERIM_DATA_DIR, METRO_LONGRUN_START, PROCESSED_DATA_DIR, RQ0B_END,
-    RQ0B_STATE_START,
+    CROSSWALKS_DIR, ENERGY_SHARE_MULTIPLE, ENERGY_SHARE_YEAR, INTERIM_DATA_DIR, METRO_LONGRUN_START,
+    NETMIG_DECADES, PROCESSED_DATA_DIR, RQ0B_ANNUAL_END, RQ0B_ANNUAL_METRO_START,
+    RQ0B_ANNUAL_STATE_START, RQ0B_END, RQ0B_STATE_START,
 )
-from us_housing_crisis_analysis.geography import county_to_cbsa, harmonize_county_fips
+from us_housing_crisis_analysis.geography import (
+    county_to_cbsa, first_listed_state_fips, harmonize_county_fips,
+)
 
 app = typer.Typer()
 PANEL_COLUMNS = ["geo_id", "geo_name", "year", "population", "income_pc", "income_source"]
@@ -190,17 +193,120 @@ def unmatched_county_report(nhgis: pd.DataFrame) -> pd.DataFrame:
     ).sort_values(["year", "population"], ascending=[True, False]).reset_index(drop=True)
 
 
+METRO_ANNUAL_COLUMNS = PANEL_COLUMNS + ["growth_comparable"]
+
+
+def build_us_state_annual(bea: pd.DataFrame) -> pd.DataFrame:
+    """State x year from BEA alone: SAINC1 population and per capita income, 1929-2024. Alaska and
+    Hawaii start in 1950 (BEA's earlier zeros are dropped at parse time, D-24)."""
+    years = range(RQ0B_ANNUAL_STATE_START, RQ0B_ANNUAL_END + 1)
+    pop = _pick(bea, "population_bea", years, "state")[["geo_id", "geo_name", "year", "value"]]
+    income = _pick(bea, "income_pc", years, "state")[["geo_id", "year", "value"]]
+    return _assemble(pop.rename(columns={"value": "population"}),
+                     income.rename(columns={"value": "income_pc"}).assign(income_source="bea"))
+
+
+def split_growth_years(cw: pd.DataFrame, first_year: pd.Series, start: int) -> set[tuple[str, int]]:
+    """(cbsa_code, t) pairs whose one-year growth t -> t+1 compares different areas: a county split
+    off across a metro line first appears in the data in year t+1 (which can differ from the legal
+    split date). Splits before `start` are already in place when the panel begins."""
+    splits = pd.read_csv(COUNTY_SPLITS_PATH, dtype={"new_fips": str, "parent_fips": str})
+    cbsa = cw.set_index("county_fips").cbsa_code
+    flagged = set()
+    for s in splits.itertuples():
+        if s.split_year < start or s.new_fips not in first_year.index:
+            continue
+        new_area, parent_area = cbsa.get(s.new_fips), cbsa.get(s.parent_fips)  # None = no metro
+        if new_area != parent_area:
+            t = int(first_year[s.new_fips]) - 1
+            flagged |= {(a, t) for a in (new_area, parent_area) if a is not None}
+    return flagged
+
+
+def build_us_metro_annual(bea: pd.DataFrame, crosswalk: pd.DataFrame) -> pd.DataFrame:
+    """Metro (2023 CBSA) x year, 1969-2024: BEA county personal income and population summed over
+    the metro's counties (D-23), income = sum of income / sum of population."""
+    years = range(RQ0B_ANNUAL_METRO_START, RQ0B_ANNUAL_END + 1)
+    cw = crosswalk[["county_fips", "cbsa_code", "cbsa_title"]]
+    pop_c = county_series(bea, "population_bea", years)
+    first_year = pop_c.groupby("county_fips").year.min()
+    pop = pop_c.merge(cw, on="county_fips").groupby(["cbsa_code", "cbsa_title", "year"], as_index=False)["value"].sum()
+    pi = county_series(bea, "personal_income", years).merge(cw, on="county_fips")
+    pi = pi.groupby(["cbsa_code", "year"], as_index=False)["value"].sum().rename(columns={"value": "pi"})
+    m = pop.merge(pi, on=["cbsa_code", "year"], how="left")
+    flagged = split_growth_years(cw, first_year, RQ0B_ANNUAL_METRO_START)
+    out = pd.DataFrame(
+        {
+            "geo_id": "cbsa:" + m.cbsa_code, "geo_name": m.cbsa_title, "year": m.year.astype("int64"),
+            "population": m.value, "income_pc": m.pi / m.value, "income_source": "bea",
+            "growth_comparable": [(c, y) not in flagged for c, y in zip(m.cbsa_code, m.year)],
+        }
+    )
+    return out[METRO_ANNUAL_COLUMNS].sort_values(["geo_id", "year"]).reset_index(drop=True)
+
+
+def energy_states(bea: pd.DataFrame) -> pd.DataFrame:
+    """Plan 1b spec 4.3: a state is an energy state if its mining share of earnings in
+    ENERGY_SHARE_YEAR is at least ENERGY_SHARE_MULTIPLE x the national share. The national share
+    sums the states that report both values; a suppressed mining value means not an energy state."""
+    total = _pick(bea, "earnings_total", [ENERGY_SHARE_YEAR], "state").set_index("geo_id")
+    mining = _pick(bea, "earnings_mining", [ENERGY_SHARE_YEAR], "state").set_index("geo_id").value
+    mining = mining.reindex(total.index)
+    national = mining.sum() / total.value[mining.notna()].sum()
+    share = mining / total.value
+    out = pd.DataFrame({"state_fips": total.index.str.removeprefix("state:"), "state_name": total.geo_name,
+                        "mining_share": share, "ratio": share / national})
+    out["energy"] = (out.ratio >= ENERGY_SHARE_MULTIPLE).fillna(False).astype(bool)
+    return out.sort_values("ratio", ascending=False).reset_index(drop=True)
+
+
+def drop_states(panel: pd.DataFrame, fips: set[str]) -> pd.DataFrame:
+    """Remove states in `fips`, or metros whose first listed state is in `fips`."""
+    is_state = panel.geo_id.str.startswith("state:")
+    state = panel.geo_id.str[6:8].where(is_state, first_listed_state_fips(panel.geo_name))
+    return panel[~state.isin(fips)]
+
+
+def build_us_state_net_migration(longrun: pd.DataFrame, netmig: pd.DataFrame) -> pd.DataFrame:
+    """State x decade (Plan 1c): census population at both ends, income at the start, county net
+    migration summed to the state. Rates are simple percent changes of the starting population,
+    so total = migration + natural exactly. A state missing net migration for a decade drops out
+    of that decade only.
+
+    natural_rate is the residual (total - migration): natural increase plus any change in census
+    coverage between the two counts. Nationally it is within 5% of NCHS births minus deaths except
+    in the 1970s, 1980s and 1990s (ratios 1.23 / 0.91 / 1.20), when census coverage improved,
+    worsened and improved again."""
+    nm = netmig[(netmig.variable == "net_migration") & (netmig.geo_level == "county")]
+    nm = (nm.assign(geo_id="state:" + nm.geo_id.str[7:9]).groupby(["geo_id", "year"], as_index=False)["value"].sum()
+          .rename(columns={"value": "net_migration"}))
+    p = longrun[["geo_id", "geo_name", "year", "population", "income_pc"]]
+    nxt = p[["geo_id", "year", "population"]].assign(year=p.year - 10).rename(columns={"population": "population_next"})
+    m = p.merge(nxt, on=["geo_id", "year"]).merge(nm, on=["geo_id", "year"])
+    m = m[m.year.isin(list(NETMIG_DECADES)) & (m.population > 0)]
+    total = (m.population_next - m.population) / m.population
+    migration = m.net_migration / m.population
+    out = m.rename(columns={"year": "decade"}).assign(
+        total_rate=total, migration_rate=migration, natural_rate=total - migration)
+    cols = ["geo_id", "geo_name", "decade", "population", "population_next", "income_pc", "net_migration",
+            "total_rate", "migration_rate", "natural_rate"]
+    return out[cols].sort_values(["geo_id", "decade"]).reset_index(drop=True)
+
+
 @app.command()
 def main():
     read = lambda s: pd.read_parquet(INTERIM_DATA_DIR / f"{s}.parquet")  # noqa: E731
-    nhgis, bea, manual, ipums, icpsr = (read(s) for s in ("nhgis", "bea", "manual", "ipums", "icpsr"))
+    nhgis, bea, manual, ipums, icpsr, netmig = (read(s) for s in ("nhgis", "bea", "manual", "ipums", "icpsr", "netmig"))
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     panels = {
         "us_state_longrun": build_us_state_longrun(nhgis, bea, manual),
         "us_metro_longrun": build_us_metro_longrun(nhgis, ipums, icpsr, bea, county_to_cbsa()),
+        "us_state_annual": build_us_state_annual(bea),
+        "us_metro_annual": build_us_metro_annual(bea, county_to_cbsa()),
     }
+    panels["us_state_net_migration"] = build_us_state_net_migration(panels["us_state_longrun"], netmig)
     for name, df in panels.items():
-        if df.duplicated(["geo_id", "year"]).any():
+        if df.duplicated(["geo_id", "decade" if "decade" in df else "year"]).any():
             raise ValueError(f"{name}: duplicate (geo_id, year) rows")
         df.to_parquet(PROCESSED_DATA_DIR / f"{name}.parquet", index=False)
         logger.success(f"{name}: {len(df):,} rows, {df.geo_id.nunique()} units")

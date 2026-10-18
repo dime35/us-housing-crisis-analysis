@@ -71,10 +71,10 @@ notebooks:
 test:
 	$(PYTHON_INTERPRETER) -m pytest
 
-## Run only tests that need no downloaded data
+## Run only tests that need no downloaded data and no long simulations
 .PHONY: test-fast
 test-fast:
-	$(PYTHON_INTERPRETER) -m pytest -m "not data"
+	$(PYTHON_INTERPRETER) -m pytest -m "not data and not slow"
 
 ## Rebuild everything implemented so far
 .PHONY: all

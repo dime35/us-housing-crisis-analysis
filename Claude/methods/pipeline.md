@@ -23,7 +23,7 @@ dashboard.py          →  reports/dashboard/index.html
 | `sources/<name>.py` | One per source. `download(force=False)` fetches raw files; `load()` returns the long format |
 | `geography.py` | Crosswalks between county, CBSA, OECD metro, UN WUP agglomeration, and featured-city IDs |
 | `dataset.py` | Typer CLI that runs download and load for every source |
-| `features.py` | Builds the processed panels (`us_state_longrun`, `us_metro_longrun` so far) |
+| `features.py` | Builds the processed panels (the US panels listed under Processed panels) |
 | `modeling/elasticity.py` | Panel regressions (RQ0c, RQ1, RQ2) |
 | `modeling/breaks.py` | Decade-by-decade coefficients and structural break tests (RQ0b) |
 | `modeling/event_study.py` | Auckland difference-in-differences and synthetic control (RQ5) |
@@ -46,7 +46,9 @@ Every source's `load()` returns these columns: `geo_id, geo_name, geo_level, cou
 |---|---|---|
 | `us_state_longrun` | state × decade, 1880–2020 (population, income per capita, income source) | RQ0b |
 | `us_metro_longrun` | metro × decade, 1900–2020 | RQ0a, RQ0b, RQ3 |
-| `us_metro_annual` | metro × year, 2000+ | RQ2, RQ4 |
+| `us_state_annual` | state × year, 1929–2024 (BEA population and income per capita; Alaska and Hawaii from 1950) | RQ0b (Plan 1b) |
+| `us_metro_annual` | 2023 CBSA × year, 1969–2024 (BEA county sums of population and personal income); `growth_comparable` at year t refers to growth t → t+1 and is False where a county split crosses a metro line (D-27). Build step 5 adds housing columns | RQ0b (Plan 1b), RQ2, RQ4 |
+| `us_state_net_migration` | state × decade, 1950s–2010s (census population at both ends, income per capita at the start, county net migration summed to the state; `total_rate = migration_rate + natural_rate`, all divided by the starting population). A state missing net migration for a decade drops out of that decade, never set to zero. `natural_rate` is the residual (total − migration): natural increase **plus any change in census coverage between the two counts**, not pure births minus deaths. Data check: the US sum of `natural_rate × population` is within 5% of NCHS births − deaths (`references/manual_data/us_natural_increase.csv`) for the 1950s, 1960s, 2000s and 2010s, but not the 1970s, 1980s and 1990s (ratios 1.23 / 0.91 / 1.20). In those decades the census net undercount (demographic analysis) went from 2.7% (1970) to 1.2% (1980), 1.8% (1990) and 0.12% (2000), and the coverage change lands in the residual. Sources: 1970–1990 from National Academies, *Modernizing the U.S. Census* (1995), ch. 2, citing Robinson et al. (1993), https://www.nationalacademies.org/read/4805/chapter/4; 2000 from the Census Bureau's revised demographic analysis (October 2001), https://www.census.gov/programs-surveys/decennial-census/about/coverage-measurement/da.2000_Demographic_Analysis.html | RQ0b (Plan 1c) |
 | `oecd_metro_panel` | metro × year, ~2000–2022 | RQ1, RQ2 |
 | `global_agglomerations` | agglomeration × 5 years, 1950–2020 | RQ0c |
 | `national_housing` | country × year | RQ3, RQ4 |

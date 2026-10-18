@@ -73,3 +73,30 @@ def test_saved_payload_drops_the_request_and_its_key(tmp_path, monkeypatch):
         text = path.read_text()
         assert "secret-key" not in text and "Request" not in text
         assert "Results" in json.loads(text)["BEAAPI"]
+
+
+def _payload(rows, unit_mult="0"):
+    data = [{"GeoFips": f, "GeoName": n, "TimePeriod": y, "DataValue": v, "UNIT_MULT": unit_mult}
+            for f, n, y, v in rows]
+    return {"BEAAPI": {"Results": {"Data": data}}}
+
+
+def test_new_requests_are_registered():
+    assert bea.REQUESTS["sainc1_state_pop"] == ("SAINC1", 2, "STATE", "state", "population_bea", "persons")
+    assert bea.REQUESTS["sainc5s_state_earnings_total"][:2] == ("SAINC5S", 35)
+    assert bea.REQUESTS["sainc5s_state_earnings_mining"][:2] == ("SAINC5S", 200)
+
+
+def test_state_population_drops_alaska_zero_placeholder(tmp_path):
+    p = tmp_path / "pop.json"
+    p.write_text(json.dumps(_payload([("02000", "Alaska *", "1940", "0"), ("02000", "Alaska *", "1950", "135,000"),
+                                      ("00000", "United States", "1950", "151,000,000")])))
+    df = validate_long(bea.parse_bea_json(p, "state", "population_bea", "persons"))
+    assert df[["geo_id", "year", "value"]].values.tolist() == [["state:02", 1950, 135000.0]]
+
+
+def test_earnings_in_thousands_become_dollars(tmp_path):
+    p = tmp_path / "earn.json"
+    p.write_text(json.dumps(_payload([("56000", "Wyoming", "1980", "1,234")], unit_mult="3")))
+    df = bea.parse_bea_json(p, "state", "earnings_mining", "usd_current")
+    assert df.value.tolist() == [1_234_000.0]

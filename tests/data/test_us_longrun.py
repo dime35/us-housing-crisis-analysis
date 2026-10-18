@@ -90,7 +90,7 @@ def test_ipums_1940_wages_track_bea_1940_income(interim):
     ip = ip.assign(state=ip.geo_id.str[7:9]).pivot_table(index="state", columns="variable", values="value", aggfunc="sum")
     wages_pc = ip.wage_income_total / ip.persons_ipums
     b = interim("bea")
-    b = b[(b.geo_level == "state") & (b.year == 1940)]
+    b = b[(b.geo_level == "state") & (b.year == 1940) & (b.variable == "income_pc")]
     b = b.set_index(b.geo_id.str[6:8]).value
     both = pd.concat([np.log(wages_pc), np.log(b)], axis=1, join="inner").dropna()
     assert len(both) >= 45

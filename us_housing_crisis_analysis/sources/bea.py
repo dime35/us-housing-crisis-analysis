@@ -1,6 +1,7 @@
-"""BEA Regional API: per capita personal income for states (SAINC1, 1929+), and county personal
-income and population (CAINC1, 1969+), which features.py sums to 2023 CBSAs like every other
-metro year. (CAINC1 at MSA level returns BEA error 101 "Unknown error".)"""
+"""BEA Regional API: per capita personal income and population for states (SAINC1, 1929+), 1980
+mining and total earnings for states (SAINC5S, SIC basis, 1958-2001; energy-state rule), and
+county personal income and population (CAINC1, 1969+), which features.py sums to 2023 CBSAs like
+every other metro year. (CAINC1 at MSA level returns BEA error 101 "Unknown error".)"""
 
 import json
 from pathlib import Path
@@ -14,9 +15,13 @@ from us_housing_crisis_analysis.sources._http import download_file, require_env
 API_URL = "https://apps.bea.gov/api/data"
 RAW_DIR = RAW_DATA_DIR / "bea"
 # file stem -> (table, line code, GeoFips scope, geo_level, variable, unit).
-# Line 1 = personal income, 2 = population, 3 = per capita personal income.
+# SAINC1/CAINC1: line 1 = personal income, 2 = population, 3 = per capita personal income.
+# SAINC5S: line 35 = earnings by place of work, 200 = mining earnings (SIC division B).
 REQUESTS = {
     "sainc1_state_pcpi": ("SAINC1", 3, "STATE", "state", "income_pc", "usd_current"),
+    "sainc1_state_pop": ("SAINC1", 2, "STATE", "state", "population_bea", "persons"),
+    "sainc5s_state_earnings_total": ("SAINC5S", 35, "STATE", "state", "earnings_total", "usd_current"),
+    "sainc5s_state_earnings_mining": ("SAINC5S", 200, "STATE", "state", "earnings_mining", "usd_current"),
     "cainc1_county_pi": ("CAINC1", 1, "COUNTY", "county", "personal_income", "usd_current"),
     "cainc1_county_pop": ("CAINC1", 2, "COUNTY", "county", "population_bea", "persons"),
 }

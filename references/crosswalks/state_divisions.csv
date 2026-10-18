@@ -1,0 +1,52 @@
+state_fips,state_abbr,division,division_name,region
+09,CT,1,New England,Northeast
+23,ME,1,New England,Northeast
+25,MA,1,New England,Northeast
+33,NH,1,New England,Northeast
+44,RI,1,New England,Northeast
+50,VT,1,New England,Northeast
+34,NJ,2,Middle Atlantic,Northeast
+36,NY,2,Middle Atlantic,Northeast
+42,PA,2,Middle Atlantic,Northeast
+17,IL,3,East North Central,Midwest
+18,IN,3,East North Central,Midwest
+26,MI,3,East North Central,Midwest
+39,OH,3,East North Central,Midwest
+55,WI,3,East North Central,Midwest
+19,IA,4,West North Central,Midwest
+20,KS,4,West North Central,Midwest
+27,MN,4,West North Central,Midwest
+29,MO,4,West North Central,Midwest
+31,NE,4,West North Central,Midwest
+38,ND,4,West North Central,Midwest
+46,SD,4,West North Central,Midwest
+10,DE,5,South Atlantic,South
+11,DC,5,South Atlantic,South
+12,FL,5,South Atlantic,South
+13,GA,5,South Atlantic,South
+24,MD,5,South Atlantic,South
+37,NC,5,South Atlantic,South
+45,SC,5,South Atlantic,South
+51,VA,5,South Atlantic,South
+54,WV,5,South Atlantic,South
+01,AL,6,East South Central,South
+21,KY,6,East South Central,South
+28,MS,6,East South Central,South
+47,TN,6,East South Central,South
+05,AR,7,West South Central,South
+22,LA,7,West South Central,South
+40,OK,7,West South Central,South
+48,TX,7,West South Central,South
+04,AZ,8,Mountain,West
+08,CO,8,Mountain,West
+16,ID,8,Mountain,West
+30,MT,8,Mountain,West
+32,NV,8,Mountain,West
+35,NM,8,Mountain,West
+49,UT,8,Mountain,West
+56,WY,8,Mountain,West
+02,AK,9,Pacific,West
+06,CA,9,Pacific,West
+15,HI,9,Pacific,West
+41,OR,9,Pacific,West
+53,WA,9,Pacific,West
