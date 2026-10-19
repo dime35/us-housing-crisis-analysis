@@ -21,11 +21,12 @@ dashboard.py          →  reports/dashboard/index.html
 |---|---|
 | `config.py` | Paths, year ranges, featured-city list, peer-group rules |
 | `sources/<name>.py` | One per source. `download(force=False)` fetches raw files; `load()` returns the long format |
-| `geography.py` | Crosswalks between county, CBSA, OECD metro, UN WUP agglomeration, and featured-city IDs |
+| `geography.py` | Crosswalks between county, CBSA, OECD metro, UN WUP agglomeration, and featured-city IDs; for RQ0a, place → county → metro, the 1950 top-100 cities and each metro's main city |
 | `dataset.py` | Typer CLI that runs download and load for every source |
 | `features.py` | Builds the processed panels (the US panels listed under Processed panels) |
 | `modeling/elasticity.py` | Panel regressions (RQ0c, RQ1, RQ2) |
 | `modeling/breaks.py` | Decade-by-decade coefficients and structural break tests (RQ0b) |
+| `modeling/city_metro.py` | RQ0a: growth by period, keep-up classes, annexing flags, unit-resampling ranges and the three preset rules |
 | `modeling/event_study.py` | Auckland difference-in-differences and synthetic control (RQ5) |
 | `plots.py` | Shared figure style |
 | `dashboard.py` | Static Plotly dashboard |
@@ -49,6 +50,7 @@ Every source's `load()` returns these columns: `geo_id, geo_name, geo_level, cou
 | `us_state_annual` | state × year, 1929–2024 (BEA population and income per capita; Alaska and Hawaii from 1950) | RQ0b (Plan 1b) |
 | `us_metro_annual` | 2023 CBSA × year, 1969–2024 (BEA county sums of population and personal income); `growth_comparable` at year t refers to growth t → t+1 and is False where a county split crosses a metro line (D-27). Build step 5 adds housing columns | RQ0b (Plan 1b), RQ2, RQ4 |
 | `us_state_net_migration` | state × decade, 1950s–2010s (census population at both ends, income per capita at the start, county net migration summed to the state; `total_rate = migration_rate + natural_rate`, all divided by the starting population). A state missing net migration for a decade drops out of that decade, never set to zero. `natural_rate` is the residual (total − migration): natural increase **plus any change in census coverage between the two counts**, not pure births minus deaths. Data check: the US sum of `natural_rate × population` is within 5% of NCHS births − deaths (`references/manual_data/us_natural_increase.csv`) for the 1950s, 1960s, 2000s and 2010s, but not the 1970s, 1980s and 1990s (ratios 1.23 / 0.91 / 1.20). In those decades the census net undercount (demographic analysis) went from 2.7% (1970) to 1.2% (1980), 1.8% (1990) and 0.12% (2000), and the coverage change lands in the residual. Sources: 1970–1990 from National Academies, *Modernizing the U.S. Census* (1995), ch. 2, citing Robinson et al. (1993), https://www.nationalacademies.org/read/4805/chapter/4; 2000 from the Census Bureau's revised demographic analysis (October 2001), https://www.census.gov/programs-surveys/decennial-census/about/coverage-measurement/da.2000_Demographic_Analysis.html | RQ0b (Plan 1c) |
+| `us_city_metro` | metro (2023 CBSA, Puerto Rico left out; 387) × decade, 1900–2020. `city_fips`, `city_name` (the main city: largest 1950 city for the 81 `headline` metros, first-named city otherwise), `city_population` (CESTA 1900–2010, NHGIS AV0 2020), `metro_population` (from `us_metro_longrun`, 1940 on), `suburb_population` (metro − city), `core_population` (all the metro's 1950 top-100 cities with a CESTA series; headline metros), `metro_central_population` (central counties only), `city_land_sqmi` (WP27 1950–1980, Gazetteers 1990–2020), `growth_comparable` and `central_growth_comparable` (False for a decade whose growth to the next crosses a county split, D-27). Sources and rules: `geography.md`, "Secondary unit: city proper" | RQ0a (Plan 2) |
 | `oecd_metro_panel` | metro × year, ~2000–2022 | RQ1, RQ2 |
 | `global_agglomerations` | agglomeration × 5 years, 1950–2020 | RQ0c |
 | `national_housing` | country × year | RQ3, RQ4 |

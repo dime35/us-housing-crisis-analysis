@@ -7,10 +7,12 @@ import typer
 from us_housing_crisis_analysis.config import (
     CROSSWALKS_DIR, ENERGY_SHARE_MULTIPLE, ENERGY_SHARE_YEAR, INTERIM_DATA_DIR, METRO_LONGRUN_START,
     NETMIG_DECADES, PROCESSED_DATA_DIR, RQ0B_ANNUAL_END, RQ0B_ANNUAL_METRO_START,
-    RQ0B_ANNUAL_STATE_START, RQ0B_END, RQ0B_STATE_START,
+    RQ0A_CITY_START, RQ0A_METRO_START, RQ0A_OVERLAP_TOLERANCE, RQ0B_ANNUAL_STATE_START, RQ0B_END,
+    RQ0B_STATE_START,
 )
 from us_housing_crisis_analysis.geography import (
-    county_to_cbsa, first_listed_state_fips, harmonize_county_fips,
+    county_to_cbsa, first_listed_state_fips, harmonize_county_fips, load_metro_main_city,
+    load_old_cities, load_place_code_changes,
 )
 
 app = typer.Typer()
@@ -293,10 +295,101 @@ def build_us_state_net_migration(longrun: pd.DataFrame, netmig: pd.DataFrame) ->
     return out[cols].sort_values(["geo_id", "decade"]).reset_index(drop=True)
 
 
+# --- RQ0a (Plan 2): main city, metro and suburbs by decade ---
+CITY_METRO_COLUMNS = [
+    "geo_id", "geo_name", "year", "city_fips", "city_name", "headline", "city_population",
+    "metro_population", "suburb_population", "core_population", "metro_central_population",
+    "city_land_sqmi", "growth_comparable", "central_growth_comparable",
+]
+
+
+def _places(df: pd.DataFrame, variable: str, years) -> pd.DataFrame:
+    c = _pick(df, variable, years, "city")
+    return pd.DataFrame({"place_fips": c.geo_id.str.removeprefix("place:").to_numpy(),
+                         "year": c.year.to_numpy(), "value": c.value.to_numpy()})
+
+
+def apply_place_code_changes(places: pd.DataFrame, changes: pd.DataFrame) -> pd.DataFrame:
+    """Put each value under its 2010 place code (CESTA's key). A row of place_code_changes.csv says
+    that in `year` the value for `place_fips` is the sum of the listed `source_fips` (Louisville
+    2020 = balance + old city). A place's own row in a listed year counts only if it is listed."""
+    m = places.merge(changes[["place_fips", "year", "source_fips"]].rename(columns={"place_fips": "target"}),
+                     left_on=["place_fips", "year"], right_on=["source_fips", "year"], how="left")
+    listed = set(zip(changes.place_fips, changes.year))
+    own = [(p, y) in listed and pd.isna(t) for p, y, t in zip(m.place_fips, m.year, m.target)]
+    m = m[~pd.Series(own, index=m.index, dtype=bool)]
+    m = m.assign(place_fips=m.target.fillna(m.place_fips))
+    return m.groupby(["place_fips", "year"], as_index=False)["value"].sum()
+
+
+def city_population(cesta: pd.DataFrame, nhgis: pd.DataFrame, changes: pd.DataFrame) -> pd.DataFrame:
+    """CESTA 1900-2010; NHGIS AV0 for 2020, used only where AV0 and CESTA agree in 2010 within
+    RQ0A_OVERLAP_TOLERANCE (both must measure the same place: the Honolulu CDP was redefined)."""
+    c = _places(cesta, "population", _decades(RQ0A_CITY_START, 2010))
+    a = apply_place_code_changes(_places(nhgis, "population", [2010, 2020]), changes)
+    c10 = c[c.year == 2010].set_index("place_fips").value
+    a10 = a[a.year == 2010].set_index("place_fips").value.reindex(c10.index)
+    agree = set(c10.index[((a10 / c10) - 1).abs() <= RQ0A_OVERLAP_TOLERANCE])
+    dropped = sorted((set(a.loc[a.year == 2020, "place_fips"]) & set(c10.index)) - agree)
+    if dropped:
+        logger.info(f"2020 city counts not used (2010 sources disagree): {dropped}")
+    return pd.concat([c, a[(a.year == 2020) & a.place_fips.isin(agree)]], ignore_index=True)
+
+
+def city_land_area(wp27: pd.DataFrame, gazetteer: pd.DataFrame, changes: pd.DataFrame) -> pd.DataFrame:
+    """One source per year: Working Paper 27 for 1950-1980 (top-100 places only), Gazetteers for
+    1990-2020 (every place; WP27's 1990 table is a check)."""
+    w = _places(wp27, "land_area", [1950, 1960, 1970, 1980])
+    g = apply_place_code_changes(_places(gazetteer, "land_area", [1990, 2000, 2010, 2020]), changes)
+    return pd.concat([w, g], ignore_index=True)
+
+
+def build_us_city_metro(
+    cesta: pd.DataFrame, nhgis: pd.DataFrame, wp27: pd.DataFrame, gazetteer: pd.DataFrame,
+    metro_longrun: pd.DataFrame, crosswalk: pd.DataFrame, main_city: pd.DataFrame,
+    old_cities: pd.DataFrame, changes: pd.DataFrame,
+) -> pd.DataFrame:
+    """Metro x decade (RQ0a spec §2): the main city, the metro (from 1940), the suburbs (metro -
+    city), the core (all the metro's 1950 top-100 cities with a CESTA series; missing if any of them
+    is), the metro's central counties, and the city's land area. growth_comparable (and its
+    central-counties twin) is False for a decade whose growth to the next compares different areas
+    because a county split crosses the line (D-27)."""
+    years = _decades(RQ0A_CITY_START)
+    grid = main_city.rename(columns={"place_fips": "city_fips"}).merge(pd.DataFrame({"year": years}), how="cross")
+    grid["geo_id"] = "cbsa:" + grid.cbsa_code
+    pop = city_population(cesta, nhgis, changes).rename(columns={"place_fips": "city_fips", "value": "city_population"})
+    area = city_land_area(wp27, gazetteer, changes).rename(columns={"place_fips": "city_fips", "value": "city_land_sqmi"})
+    out = grid.merge(pop, on=["city_fips", "year"], how="left").merge(area, on=["city_fips", "year"], how="left")
+
+    m = metro_longrun[metro_longrun.year >= RQ0A_METRO_START][["geo_id", "year", "population"]]
+    out = out.merge(m.rename(columns={"population": "metro_population"}), on=["geo_id", "year"], how="left")
+    out["suburb_population"] = out.metro_population - out.city_population
+
+    old = old_cities[old_cities.in_cesta.astype(bool)][["place_fips", "cbsa_code"]]
+    core = old.merge(pop.rename(columns={"city_fips": "place_fips"}), on="place_fips")
+    n_old = old.groupby("cbsa_code").size()
+    core = core.groupby(["cbsa_code", "year"]).city_population.agg(["sum", "size"]).reset_index()
+    core = core[core["size"] == core.cbsa_code.map(n_old)]
+    out = out.merge(core[["cbsa_code", "year", "sum"]].rename(columns={"sum": "core_population"}),
+                    on=["cbsa_code", "year"], how="left")
+
+    central = crosswalk[crosswalk.central.astype(bool)][["county_fips", "cbsa_code"]]
+    cpop = county_series(nhgis, "population", _decades(RQ0A_METRO_START)).merge(central, on="county_fips")
+    cpop = cpop.groupby(["cbsa_code", "year"], as_index=False)["value"].sum()
+    out = out.merge(cpop.rename(columns={"value": "metro_central_population"}), on=["cbsa_code", "year"], how="left")
+
+    flagged, flagged_central = split_decades(crosswalk), split_decades(central)
+    out["growth_comparable"] = [(c, y) not in flagged for c, y in zip(out.cbsa_code, out.year)]
+    out["central_growth_comparable"] = [(c, y) not in flagged_central for c, y in zip(out.cbsa_code, out.year)]
+    out = out.rename(columns={"cbsa_title": "geo_name"})
+    return out[CITY_METRO_COLUMNS].sort_values(["geo_id", "year"]).reset_index(drop=True)
+
+
 @app.command()
 def main():
     read = lambda s: pd.read_parquet(INTERIM_DATA_DIR / f"{s}.parquet")  # noqa: E731
     nhgis, bea, manual, ipums, icpsr, netmig = (read(s) for s in ("nhgis", "bea", "manual", "ipums", "icpsr", "netmig"))
+    cesta, wp27, gaz = (read(s) for s in ("cesta", "wp27", "gazetteer"))
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     panels = {
         "us_state_longrun": build_us_state_longrun(nhgis, bea, manual),
@@ -305,6 +398,9 @@ def main():
         "us_metro_annual": build_us_metro_annual(bea, county_to_cbsa()),
     }
     panels["us_state_net_migration"] = build_us_state_net_migration(panels["us_state_longrun"], netmig)
+    panels["us_city_metro"] = build_us_city_metro(
+        cesta, nhgis, wp27, gaz, panels["us_metro_longrun"], county_to_cbsa(), load_metro_main_city(),
+        load_old_cities(), load_place_code_changes())
     for name, df in panels.items():
         if df.duplicated(["geo_id", "decade" if "decade" in df else "year"]).any():
             raise ValueError(f"{name}: duplicate (geo_id, year) rows")

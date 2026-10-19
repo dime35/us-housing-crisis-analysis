@@ -199,3 +199,75 @@ def test_state_net_migration_panel_rates_add_up_and_gaps_stay_out():
     assert md.natural_rate == pytest.approx(0.12) and md.income_pc == 10.0
     assert ("state:11", 1960) not in p.index  # missing net migration: dropped, never zero
     assert ("state:24", 1970) not in p.index  # no population at the end of the decade
+
+
+def places(rows, variable="population", source="x"):
+    """rows: (place_fips, year, value)"""
+    return long([("place:" + f, "city", y, variable, v) for f, y, v in rows], source)
+
+
+CHANGES = pd.DataFrame({"place_fips": ["2148006", "2148006", "2148006"], "year": [2000, 2020, 2020],
+                        "source_fips": ["2148000", "2148006", "2148000"]})
+
+
+def test_place_code_changes_sum_and_relabel():
+    p = pd.DataFrame({"place_fips": ["2148006", "2148000", "2148000", "2622000"],
+                      "year": [2020, 2020, 2000, 2020], "value": [386_884.0, 246_161.0, 256_231.0, 639_111.0]})
+    out = features.apply_place_code_changes(p, CHANGES).set_index(["place_fips", "year"]).value
+    assert out[("2148006", 2020)] == 633_045  # balance + old city
+    assert out[("2148006", 2000)] == 256_231  # the pre-merger city
+    assert out[("2622000", 2020)] == 639_111
+    assert ("2148000", 2020) not in out.index
+
+
+def test_2020_count_used_only_where_2010_sources_agree():
+    cesta = places([("2622000", 2010, 713_777), ("1571550", 2010, 387_170)])
+    nhgis = places([("2622000", 2010, 713_777), ("2622000", 2020, 639_111),
+                    ("1571550", 2010, 337_256), ("1571550", 2020, 350_964)])  # Honolulu CDP redefined
+    out = features.city_population(cesta, nhgis, CHANGES.iloc[:0]).set_index(["place_fips", "year"]).value
+    assert out[("2622000", 2020)] == 639_111
+    assert ("1571550", 2020) not in out.index
+    assert out[("1571550", 2010)] == 387_170
+
+
+def test_land_area_one_source_per_year():
+    wp27 = places([("2622000", 1950, 139.6), ("2622000", 1990, 138.7)], "land_area")
+    gaz = places([("2622000", 1990, 138.72), ("2148000", 2000, 62.1)], "land_area")
+    out = features.city_land_area(wp27, gaz, CHANGES).set_index(["place_fips", "year"]).value
+    assert out[("2622000", 1950)] == 139.6 and out[("2622000", 1990)] == 138.72  # Gazetteer from 1990
+    assert out[("2148006", 2000)] == 62.1
+
+
+def test_city_metro_panel(tmp_path, monkeypatch):
+    splits = tmp_path / "county_splits.csv"
+    splits.write_text("new_fips,parent_fips,split_year,note\n08014,08013,2001,x\n")
+    monkeypatch.setattr(features, "COUNTY_SPLITS_PATH", splits)
+    cw = pd.DataFrame({"county_fips": ["08031", "08013", "08014"], "cbsa_code": ["19740"] * 3,
+                       "cbsa_title": ["Denver, CO"] * 3, "area_type": ["metro"] * 3,
+                       "central": [True, True, False]})
+    main = pd.DataFrame({"cbsa_code": ["19740"], "cbsa_title": ["Denver, CO"], "city_name": ["Denver, CO"],
+                         "place_fips": ["0820000"], "top100_1950_rank": [24], "headline": [True], "note": [""]})
+    old = pd.DataFrame({"rank_1950": [24, 90], "place_fips": ["0820000", "0804000"], "city_name": ["a", "b"],
+                        "population_1950": [1.0, 1.0], "cbsa_code": ["19740", "19740"],
+                        "main_city": [True, False], "in_cesta": [True, True]})
+    cesta = places([("0820000", 1950, 400), ("0820000", 1990, 450), ("0820000", 2010, 600),
+                    ("0804000", 1950, 50)])  # the second old city has no 1990 count
+    nhgis = places([("0820000", 2010, 600), ("0820000", 2020, 700)])
+    nhgis = pd.concat([nhgis, long([("county:08031", "county", y, "population", 1000) for y in (1950, 1990, 2000)]
+                                   + [("county:08013", "county", y, "population", 500) for y in (1950, 1990, 2000)], "nhgis")])
+    metro = pd.DataFrame({"geo_id": "cbsa:19740", "geo_name": "Denver, CO", "year": [1930, 1950, 1990, 2000],
+                          "population": [900.0, 1500.0, 1600.0, 1700.0]})
+    area = places([("0820000", 1950, 66.8)], "land_area")
+    gaz = places([("0820000", 1990, 153.3)], "land_area")
+    p = features.build_us_city_metro(cesta, nhgis, area, gaz, metro, cw, main, old, CHANGES.iloc[:0])
+    p = p.set_index("year")
+    assert list(p.columns) == [c for c in features.CITY_METRO_COLUMNS if c != "year"]
+    assert np.isnan(p.loc[1930, "metro_population"])  # metro figures start in 1940
+    assert p.loc[1950, "suburb_population"] == 1100
+    assert p.loc[1950, "core_population"] == 450
+    assert np.isnan(p.loc[1990, "core_population"])  # an old city is missing that year
+    assert p.loc[1990, "metro_central_population"] == 1500  # Denver + Boulder, not the outlying county
+    assert p.loc[2020, "city_population"] == 700
+    assert p.loc[1990, "city_land_sqmi"] == 153.3
+    assert not p.loc[2000, "central_growth_comparable"] and p.loc[1990, "growth_comparable"]
+    assert p.headline.all() and set(p.city_fips) == {"0820000"}
