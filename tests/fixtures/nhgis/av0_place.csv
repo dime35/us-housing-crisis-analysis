@@ -1,0 +1,29 @@
+NHGISCODE,GISJOIN,YEAR,STATE,STATEFP,STATENH,PLACE,PLACEA,NAME,AV0AA
+G01000124,G0100005,1970,Alabama,01,010,Abbeville city,00124,Abbeville,2996
+G02003000,G0200140,1970,Alaska,02,020,Anchorage municipality,03000,Anchorage,48029
+G0203000,G0203000,1970,Alaska,02,020,Shemya Station,3000,Shemya Station (U),1131
+G21048000,G2101230,1970,Kentucky,21,210,Louisville city,48000,Louisville,361472
+G26022000,G2600680,1970,Michigan,26,260,Detroit city,22000,Detroit,1511482
+G01000124,G0100005,1980,Alabama,01,010,Abbeville city,00124,ABBEVILLE CITY,3155
+G02003000,G0200140,1980,Alaska,02,020,Anchorage municipality,03000,ANCHORAGE CITY,174431
+G0203000,G0203000,1980,Alaska,02,020,Shemya Station,3000,SHEMYA STATION %CDP<,600
+G21048000,G2101230,1980,Kentucky,21,210,Louisville city,48000,LOUISVILLE CITY,298451
+G26022000,G2600680,1980,Michigan,26,260,Detroit city,22000,DETROIT CITY,1203339
+G01000124,G01000124,1990,Alabama,01,010,Abbeville city,00124,Abbeville city,3173
+G02003000,G02003000,1990,Alaska,02,020,Anchorage municipality,03000,Anchorage city,226338
+G21048000,G21048000,1990,Kentucky,21,210,Louisville city,48000,Louisville city,269063
+G26022000,G26022000,1990,Michigan,26,260,Detroit city,22000,Detroit city,1027974
+G01000124,G01000124,2000,Alabama,01,010,Abbeville city,00124,Abbeville city,2987
+G02003000,G02003000,2000,Alaska,02,020,Anchorage municipality,03000,Anchorage municipality,260283
+G21048000,G21048000,2000,Kentucky,21,210,Louisville city,48000,Louisville city,256231
+G26022000,G26022000,2000,Michigan,26,260,Detroit city,22000,Detroit city,951270
+G01000124,G01000124,2010,Alabama,01,010,Abbeville city,00124,Abbeville city,2688
+G02003000,G02003000,2010,Alaska,02,020,Anchorage municipality,03000,Anchorage municipality,291826
+G21048006,G21048006,2010,Kentucky,21,210,Louisville/Jefferson County metro government (balance),48006,Louisville/Jefferson County metro government (balance),597337
+G26022000,G26022000,2010,Michigan,26,260,Detroit city,22000,Detroit city,713777
+G01000124,G01000124,2020,Alabama,01,010,Abbeville city,00124,Abbeville city,2358
+G02003000,G02003000,2020,Alaska,02,020,Anchorage municipality,03000,Anchorage municipality,291247
+G21048000,G21048000,2020,Kentucky,21,210,Louisville city,48000,Louisville city,246161
+G21048006,G21048006,2020,Kentucky,21,210,Louisville/Jefferson County metro government (balance),48006,Louisville/Jefferson County metro government (balance),386884
+G26022000,G26022000,2020,Michigan,26,260,Detroit city,22000,Detroit city,639111
+G26022000,G26022000,2016-2020,Michigan,26,260,Detroit city,22000,Detroit city,672351

@@ -129,6 +129,20 @@ ICPSR_INCOME_FILES: dict[int, dict[str, str]] = {
     },
 }
 
+# RQ0a (Plan 2): city vs. metro. City populations from 1900, metro populations from 1940, classes in
+# three periods (Plan 1c's cuts). Keep-up bars: relative = RQ0A_BAR_FRACTION x US growth over the
+# same period (50 states + DC); absolute = RQ0A_ABSOLUTE_RATE per decade, compounded. Annexing: land
+# area up more than RQ0A_ANNEX_THRESHOLD over the period (checks 0.10 and 0.40).
+RQ0A_CITY_START = 1900
+RQ0A_METRO_START = 1940
+RQ0A_PERIODS = ((1950, 1970), (1970, 1990), (1990, 2020))
+RQ0A_BAR_FRACTION = 0.5
+RQ0A_ABSOLUTE_RATE = 0.05
+RQ0A_ANNEX_THRESHOLD = 0.20
+RQ0A_MIN_GROUP = 15  # rule 2: fewer cities than this in either group -> "not testable"
+# Two city sources must agree this closely where they overlap (CESTA vs. NHGIS in 2010)
+RQ0A_OVERLAP_TOLERANCE = 0.005
+
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135
 try:
