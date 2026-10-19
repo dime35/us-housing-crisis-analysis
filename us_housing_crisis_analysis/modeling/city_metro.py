@@ -5,7 +5,12 @@ Class names describe growth patterns, not moves (D-29)."""
 import numpy as np
 import pandas as pd
 
-from us_housing_crisis_analysis.config import RQ0A_ABSOLUTE_RATE, RQ0A_ANNEX_THRESHOLD, RQ0A_BAR_FRACTION, RQ0A_PERIODS
+from us_housing_crisis_analysis.config import (
+    RQ0A_ABSOLUTE_RATE,
+    RQ0A_ANNEX_THRESHOLD,
+    RQ0A_BAR_FRACTION,
+    RQ0A_PERIODS,
+)
 from us_housing_crisis_analysis.geography import first_listed_state_fips, state_divisions
 
 # A value equal to a bar up to floating-point noise counts as reaching it (spec §4.1)
