@@ -110,3 +110,78 @@ def test_units_frame():
 def test_regions():
     p = pd.DataFrame({"geo_id": ["cbsa:1", "cbsa:2"], "geo_name": ["Detroit, MI", "Houston, TX"]})
     assert cm.regions(p).to_dict() == {"cbsa:1": "Northeast + Midwest", "cbsa:2": "South + West"}
+
+
+def u_frame(city50, metro50, annex50=None, metro70=None, metro90=None, pop=None):
+    n = len(city50)
+    return pd.DataFrame({"geo_id": [f"m{i}" for i in range(n)], "city_1950": city50, "metro_1950": metro50,
+                         "annex_1950": annex50 or ["fixed"] * n, "metro_1970": metro70 or metro50,
+                         "metro_1990": metro90 or metro50, "city_pop_1950": pop or [1.0] * n})
+
+
+def test_share_metro_kept_up_plain_and_weighted():
+    u = u_frame([0, 0, 0, 1], [1, 1, 0, 1], pop=[1, 1, 2, 9])
+    assert cm.share_metro_kept_up(u) == pytest.approx(2 / 3)
+    assert cm.share_metro_kept_up(u, weight="city_pop_1950") == pytest.approx(0.5)
+    assert np.isnan(cm.share_metro_kept_up(u_frame([1, 1], [1, 1])))  # no plateau city
+
+
+def test_fall_behind_gap_conditions_on_metros_that_kept_up():
+    u = u_frame([0, 0, 1, 1, 0], [1, 1, 1, 1, 0], annex50=["fixed", "annexing", "annexing", "fixed", "annexing"])
+    # kept-up metros: fixed {0, 1} -> 1/2 fell behind; annexing {0, 1} -> 1/2 -> D = 0
+    assert cm.fall_behind_gap(u) == pytest.approx(0.0)
+    assert cm.rule2_groups(u) == (2, 2)
+    # unconditioned adds the stagnant-metro annexing city that fell behind
+    assert cm.fall_behind_gap(u, conditioned=False) == pytest.approx(0.5 - 2 / 3)
+    assert cm.rule2_groups(u, conditioned=False) == (2, 3)
+    assert np.isnan(cm.fall_behind_gap(u_frame([0, 1], [1, 1])))  # no annexing city
+
+
+def test_fall_behind_rise_pairs_metros_classed_in_both_periods():
+    u = u_frame([0] * 4, [1, 1, 1, 0], metro90=[0, 0, np.nan, np.nan])
+    # pairs for 1990: m0, m1 (kept up, then fell behind) -> 1.0 - 0.0
+    assert cm.fall_behind_rise(u, 1990) == pytest.approx(1.0)
+    assert cm.fall_behind_share(u, 1950) == pytest.approx(0.25)
+    assert cm.fall_behind_share(u, 1990) == pytest.approx(1.0)
+
+
+def test_paired_draws_keep_metros_together_and_count_skips():
+    u = u_frame([0] * 30, [1, 0] * 15, metro70=[1, 0] * 15)
+    r = cm.paired_draws(u, lambda d: cm.fall_behind_rise(d, 1970))
+    assert r.low == 0 and r.high == 0 and r.skipped == 0  # same metros in both periods
+    rare = u_frame([0] + [1] * 39, [1] * 40)  # one plateau city: many draws have none
+    r = cm.paired_draws(rare, cm.share_metro_kept_up)
+    assert r.skipped > 0 and r.low == r.high == 1.0 and r.estimate == 1.0
+    assert cm.paired_draws(rare, cm.share_metro_kept_up) == r  # seeded
+    empty = cm.paired_draws(u_frame([1] * 5, [1] * 5), cm.share_metro_kept_up)
+    assert empty.skipped == 999 and np.isnan(empty.low) and np.isnan(empty.high)
+
+
+def test_rule1_outcomes_and_boundaries():
+    assert cm.decide_rule1(2 / 3, 0.9) == "mostly suburbanization"
+    assert cm.decide_rule1(0.1, 1 / 3) == "mostly metro stagnation"
+    assert cm.decide_rule1(0.4, 0.6) == "mixed"
+    assert cm.decide_rule1(1 / 3, 0.6) == "can't tell"  # mixed needs low above 1/3
+    assert cm.decide_rule1(0.5, 0.8) == "can't tell"
+    assert cm.decide_rule1(np.nan, np.nan) == "can't tell"
+
+
+def test_rule2_outcomes():
+    assert cm.decide_rule2(0.1, 0.5, 14, 30) == "not testable"
+    assert cm.decide_rule2(0.1, 0.5, 15, 15) == "plateau concentrated in fixed-boundary cities"
+    assert cm.decide_rule2(-0.4, 0.0, 20, 20) == "not a boundary effect"
+    assert cm.decide_rule2(0.0, 0.3, 20, 20) == "can't tell"
+    assert cm.decide_rule2(np.nan, np.nan, 20, 20) == "can't tell"
+
+
+def test_rule3_outcomes():
+    R = cm.Range
+    assert cm.decide_rule3(R(0.2, 0.05, 0.3, 0), R(0.3, 0.1, 0.5, 0)) == "later, by 1970–90"
+    assert cm.decide_rule3(R(0.1, -0.05, 0.3, 0), R(0.3, 0.1, 0.5, 0)) == "later, only after 1990"
+    assert cm.decide_rule3(R(-0.1, -0.3, 0.0, 0), R(-0.1, -0.2, -0.01, 0)) == "not later"
+    assert cm.decide_rule3(R(0.0, -0.1, 0.1, 0), R(-0.1, -0.2, -0.01, 0)) == "can't tell"
+
+
+def test_robustness_names_disagreeing_checks():
+    assert cm.robustness("mixed", {"a": "mixed", "b": "mixed"}) == "robust"
+    assert cm.robustness("mixed", {"a": "can't tell", "b": "mixed", "c": "x"}) == "fragile: a; c"

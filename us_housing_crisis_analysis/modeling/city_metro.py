@@ -2,6 +2,8 @@
 annexing flags, and the three preset answers with unit-resampling ranges (spec 2026-10-18 §4).
 Class names describe growth patterns, not moves (D-29)."""
 
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 
@@ -9,6 +11,7 @@ from us_housing_crisis_analysis.config import (
     RQ0A_ABSOLUTE_RATE,
     RQ0A_ANNEX_THRESHOLD,
     RQ0A_BAR_FRACTION,
+    RQ0A_MIN_GROUP,
     RQ0A_PERIODS,
 )
 from us_housing_crisis_analysis.geography import first_listed_state_fips, state_divisions
@@ -146,3 +149,117 @@ def units(panel: pd.DataFrame, us: dict, *, yardstick: str = "relative", fractio
     out["city_pop_1950"] = hp[hp.year == 1950].set_index("geo_id").city_population
     out["region"] = regions(hp)
     return out.reset_index()
+
+
+@dataclass(frozen=True)
+class Range:
+    estimate: float
+    low: float
+    high: float
+    skipped: int  # draws where the statistic was undefined (an empty group)
+
+
+def paired_draws(u: pd.DataFrame, stat, draws: int = 999, level: float = 0.90, seed: int = 0) -> Range:
+    """The middle `level` of `stat` over draws that resample headline metros (rows of `u`) with
+    replacement. A row carries every period, so a draw keeps the same metros in all periods, and
+    two statistics computed with the same seed use the same draws. Draws where `stat` is NaN are
+    skipped and counted."""
+    rng = np.random.default_rng(seed)
+    n = len(u)
+    vals = np.array([stat(u.iloc[rng.integers(0, n, n)]) for _ in range(draws)], dtype=float)
+    ok = vals[~np.isnan(vals)]
+    a = (1 - level) / 2
+    low, high = (np.quantile(ok, a), np.quantile(ok, 1 - a)) if len(ok) else (np.nan, np.nan)
+    return Range(float(stat(u)), float(low), float(high), int(np.isnan(vals).sum()))
+
+
+def share_metro_kept_up(u: pd.DataFrame, start: int = 1950, weight: str | None = None) -> float:
+    """Rule 1's S: among cities that fell behind in the period ("plateau cities") with a metro
+    class, the share whose metro kept up (optionally weighted, e.g. by 1950 city population)."""
+    m = (u[f"city_{start}"] == 0) & u[f"metro_{start}"].notna()
+    if not m.any():
+        return np.nan
+    k = u.loc[m, f"metro_{start}"]
+    if weight is None:
+        return float(k.mean())
+    w = u.loc[m, weight]
+    return float((k * w).sum() / w.sum())
+
+
+def _rule2_rows(u: pd.DataFrame, start: int, conditioned: bool) -> pd.DataFrame:
+    m = u[f"city_{start}"].notna() & u[f"annex_{start}"].isin(["fixed", "annexing"])
+    if conditioned:
+        m &= u[f"metro_{start}"] == 1
+    return u[m]
+
+
+def rule2_groups(u: pd.DataFrame, start: int = 1950, conditioned: bool = True) -> tuple[int, int]:
+    """(fixed-boundary, annexing) city counts in rule 2's comparison."""
+    v = _rule2_rows(u, start, conditioned)[f"annex_{start}"]
+    return int((v == "fixed").sum()), int((v == "annexing").sum())
+
+
+def fall_behind_gap(u: pd.DataFrame, start: int = 1950, conditioned: bool = True) -> float:
+    """Rule 2's D: fall-behind share of fixed-boundary cities minus that of annexing cities, among
+    metros that kept up (conditioned) or all metros. NaN if either group is empty."""
+    v = _rule2_rows(u, start, conditioned)
+    behind = 1 - v[f"city_{start}"]
+    fixed, annexing_ = behind[v[f"annex_{start}"] == "fixed"], behind[v[f"annex_{start}"] == "annexing"]
+    if fixed.empty or annexing_.empty:
+        return np.nan
+    return float(fixed.mean() - annexing_.mean())
+
+
+def fall_behind_share(u: pd.DataFrame, start: int) -> float:
+    """F: the share of metros with a class in the period that fell behind."""
+    k = u[f"metro_{start}"].dropna()
+    return float(1 - k.mean()) if len(k) else np.nan
+
+
+def fall_behind_rise(u: pd.DataFrame, later: int, first: int = 1950) -> float:
+    """Rule 3: F(later) - F(first) over metros classed in both periods."""
+    v = u[u[f"metro_{first}"].notna() & u[f"metro_{later}"].notna()]
+    if v.empty:
+        return np.nan
+    return float(v[f"metro_{first}"].mean() - v[f"metro_{later}"].mean())
+
+
+def decide_rule1(low: float, high: float) -> str:
+    """Spec §4.3, rule 1, fixed before any class was computed."""
+    if low >= 2 / 3 - EPS:
+        return "mostly suburbanization"
+    if high <= 1 / 3 + EPS:
+        return "mostly metro stagnation"
+    if low > 1 / 3 + EPS and high < 2 / 3 - EPS:
+        return "mixed"
+    return "can't tell"
+
+
+def decide_rule2(low: float, high: float, n_fixed: int, n_annexing: int,
+                 min_group: int = RQ0A_MIN_GROUP) -> str:
+    """Spec §4.3, rule 2. The group-size floor is checked on the actual data first."""
+    if min(n_fixed, n_annexing) < min_group:
+        return "not testable"
+    if low > 0:
+        return "plateau concentrated in fixed-boundary cities"
+    if high <= 0:
+        return "not a boundary effect"
+    return "can't tell"
+
+
+def decide_rule3(rise2: Range, rise3: Range) -> str:
+    """Spec §4.3, rule 3: the first period clearly above 1950-70 (F1, F2, F3 are always printed, so
+    a steady rise reads as gradual)."""
+    if rise2.low > 0:
+        return "later, by 1970–90"
+    if rise3.low > 0:
+        return "later, only after 1990"
+    if rise2.high <= 0 and rise3.high <= 0:
+        return "not later"
+    return "can't tell"
+
+
+def robustness(main: str, checks: dict[str, str]) -> str:
+    """'robust', or 'fragile: ' and the checks whose answer differs from the main one (spec §4.4)."""
+    differ = [name for name, answer in checks.items() if answer != main]
+    return "fragile: " + "; ".join(differ) if differ else "robust"
