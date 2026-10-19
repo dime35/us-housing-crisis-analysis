@@ -6,15 +6,21 @@ Model specifications for each research question. Update this file whenever a spe
 
 RQ0–RQ4 are descriptive and associational. RQ5 is the one causal design. The paper labels findings accordingly.
 
-## RQ0a — City vs. metro decomposition (US, 1900–2020)
+## RQ0a — City vs. metro decomposition (US; classes 1950–2020, background 1900–1950)
 
-- For each metro: track the central city's share of metro population by decade, and split metro growth into core growth and suburban growth.
-- Classification:
-  - **suburbanizing:** core declined, metro grew
-  - **stagnant:** both stagnated
-  - **growing:** both grew
-  - **core-recovery:** core declined and then grew again
-- Thresholds for each class will be set in `config.py` and recorded here.
+Plan 2; spec `docs/superpowers/specs/2026-10-18-rq0a-city-vs-metro-design.md`; panel `us_city_metro` (sources and city rules in `geography.md`, "Secondary unit: city proper"); code `modeling/city_metro.py`; notebook `1.0-lr-city-vs-metro`.
+
+- **Units:** every 2023 metro outside Puerto Rico has a main city. The **81 headline metros** hold a 1950 top-100 city, and their main city is their largest 1950 city. All rules use the headline metros.
+- **Growth** over a period = end ÷ start − 1, for the city, the metro, the suburbs (metro − city) and the core (all the metro's 1950 top-100 cities). Periods 1950–70, 1970–90, 1990–2020. Metro and suburb growth are dropped for a period containing a county split across the metro line (D-27; Denver 1990–2020).
+- **Keeps up** if growth ≥ the bar (a value at the bar keeps up). Main bar: half of US growth over the same period (50 states + DC: +34.3%, +22.4%, +33.3%, so bars +17.1%, +11.2%, +16.6%). Check: 5% per decade compounded (+10.25% over 20 years, +15.76% over 30). Constants in `config.RQ0A_*`.
+- **Classes:** growing (both keep up), suburbanizing (city behind, metro keeps up), stagnant (both behind), city-led (city keeps up, metro behind); **core recovery** = the city keeps up after falling behind in an earlier period. Labels describe growth patterns, not moves (D-29).
+- **Annexing:** land area up more than 20% over the period, or a city–county consolidation inside it; bracket rule where an end is missing (`geography.md`).
+- **Rules, fixed before any class was computed** (90% ranges from 999 draws resampling headline metros, seed 0; draws with an empty group skipped and counted):
+  1. S = share of plateau cities (fell behind in 1950–70) whose metro kept up. low ≥ ⅔ → mostly suburbanization; high ≤ ⅓ → mostly metro stagnation; low > ⅓ and high < ⅔ → mixed; else can't tell.
+  2. Among metros that kept up in 1950–70: D = fall-behind share of fixed-boundary cities − that of annexing cities. Fewer than 15 in either group → not testable; low > 0 → plateau concentrated in fixed-boundary cities; high ≤ 0 → not a boundary effect; else can't tell.
+  3. F₁, F₂, F₃ = share of metros falling behind per period; differences on metros classed in both periods. low(F₂ − F₁) > 0 → later, by 1970–90; else low(F₃ − F₁) > 0 → later, only after 1990; both highs ≤ 0 → not later; else can't tell.
+- **Checks and "fragile":** an answer is fragile if any check that applies to its rule disagrees. Rule 1: absolute yardstick, bar at ⅓ and ⅔ of US growth, core = all old cities, central counties only. Rule 2: absolute yardstick, bars at ⅓ and ⅔, annexing threshold 10% and 40%, central counties. Rule 3: absolute yardstick, bars at ⅓ and ⅔, central counties.
+- **Context, no rule:** S weighted by 1950 city population and S in the later periods; D over all headline metros; F by region (Northeast + Midwest vs. South + West, by the metro's first-listed state).
 
 ## RQ0b — US structural break (decennial; states 1880–2020, metros 1940–2020)
 
@@ -207,3 +213,8 @@ Assignment rules are defined in `config.py` and recorded here once implemented. 
     - The two define "before" differently: 1929–69 annually, including the lower-β Depression and war years, against the 1950s–60s by decade.
     - The middle period isn't one regime. The 1970s look like "after", and in the 1980s net migration followed income again.
     - Moving accounts for nearly all of the decline in how growth followed income.
+- **RQ0a city vs. metro, 2026-10-19 (Plan 2; notebook `1.0-lr-city-vs-metro`, tables `reports/tables/rq0a_answers.csv` and `rq0a_classes.csv`, figures `reports/figures/rq0a_city_share.png` and `rq0a_classes.png`):**
+  - **Rule 1: mostly suburbanization, robust.** Of the 49 headline cities that fell behind the US in 1950–70, 88% sat in metros that kept up (90% range 79–96%). Checks: absolute 93%, bar at ⅓ 91%, at ⅔ 78%, core = all old cities 88%, central counties 86%. Weighted by 1950 population 95%. In later periods the share falls: 44% (34–55%) in 1970–90, 36% (25–49%) in 1990–2020.
+  - **Rule 2: plateau concentrated in fixed-boundary cities, robust.** Among the 69 metros that kept up in 1950–70 with a known flag (33 fixed, 36 annexing; 5 unknown), 91% of fixed-boundary cities fell behind against 22% of annexing cities: D = 0.69 (0.54–0.82). Checks give 0.63–0.71; not conditioned, 0.66. Partly mechanical (annexed residents count as city growth).
+  - **Rule 3: later, by 1970–90, robust.** F = 9% → 43% → 36%; F₂ − F₁ = 0.35 (0.25–0.44), F₃ − F₁ = 0.28 (0.17–0.37). A jump in 1970–90 that partly eased, not a steady climb. Northeast + Midwest 12% → 77% → 61%; South + West 5% → 5% → 8%.
+  - No draws were skipped in any rule. The city's share of its metro fell from a median of about 0.50 (1940) to 0.24 (2020).

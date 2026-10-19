@@ -291,11 +291,29 @@ These were made by Claude while drafting the spec and haven't been explicitly co
   - the files' all-ages total for the 1980s (corrupted);
   - a county code crosswalk for the 1950s–70s (no current use).
 
+### D-31 · Plan 2 judgment calls (RQ0a, city vs. metro)
+- **Decision:**
+  - **Owner's choices (spec §9):** the main city is each metro's first-named city, and the headline is the metros holding a 1950 top-100 city (A; the spec corrects this to the largest 1950 city, which changes only Norfolk); annexation is measured with land area and a fixed vs. annexing split (A), with tract-based same-boundary cities (B) only if needed later; the yardstick is half the US growth rate, with 5% per decade as a check (C); periods 1950–70, 1970–90, 1990–2020 (A). The three rules were fixed in the spec before any class was computed and were not changed after the results came in. *Decided by: user, 2026-10-18.*
+  - **Implementation calls** (plan `2026-10-19-plan-2-rq0a-city-vs-metro.md`, Execution notes): *Decided by: Claude (plan and build, 2026-10-19).*
+    1. No schema change: the existing geo level `city` (prefix `place:`) is used.
+    2. The 1990 Census Gazetteer is added as the 1990 land-area source (WP27 1950–1980, Gazetteers 1990–2020). Without it 7 headline cities stayed "unknown" for annexing in two periods, over the spec's limit of 5; with it 5, 5 and 0, so ICPSR 7735 was not needed. Disclosed: while planning, annexing flags were computed for the headline cities (unconditioned; at 20%: 39 annexing / 37 fixed in 1950–70, 20 / 56 in 1970–90, 14 / 67 in 1990–2020); no class, share or rule result was computed.
+    3. Place-code changes in a committed table (Louisville 2020 = balance + old city; 1990 "remainder" codes; Macon 2014).
+    4. A city's 2020 count is used only where CESTA and NHGIS agree in 2010 within 0.5% (drops Honolulu and Crystal City TX; neither is a headline city).
+    5. CESTA vs. WP27: 8 headline city-years differ by more than 0.5% (listed in `geography.md` and pinned by a test), not the 2 the spec named.
+    6. Austin is in the 1950 top 100 (rank 73), so all nine featured US metros are headline metros.
+    7. Puerto Rico's 6 metros are left out (387 metros); 7 main-city overrides, 3 of them metros with no city series.
+    8. Connecticut's legacy counties count as central; Waterbury and Macon can't be placed by the 2020 place-to-county file (listed in the test).
+    9. Which checks apply to which rule (the spec didn't say): the core check applies to rule 1 only and the annexing thresholds to rule 2 only; rule 3 is about metros only.
+    10. Rule 3 is two rows in `rq0a_answers.csv`; context rows sit in the same table with an empty answer.
+    11. NHGIS places with 4-digit, non-FIPS codes are dropped (they collided with real codes after padding).
+- **Result (2026-10-19):** all three answers robust: mostly suburbanization (S = 0.88, range 0.79–0.96); plateau concentrated in fixed-boundary cities (D = 0.69, 0.54–0.82); metros fell behind later, by 1970–90 (F 0.09 → 0.43 → 0.36), almost only in the Northeast and Midwest.
+
 ## Open items
 - Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27).
 - Plan 1b (annual break dating) is complete on branch `plan-1b-annual-breaks` (D-28). Finding: annual data confirm the state break but can't pin down the year (about 1990 with all states, about 1970 without the energy states). Next is Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits. RQ0c (global timing) is in design.
 - Plan 1c (1970 or 1990?) is implemented on branch `plan-1c-break-year`, with the whole-branch review fixes in (D-30). Finding: by the preset rule, annual total growth can't tell (share 0.40, range −0.18 to 1.26), and the answer is fragile (standardized income gives 1970). Decade net migration gives 1970 (share 0.65, range 0.38–1.08), robust to its three checks, and accounts for about 95% of the decline. RQ0c's US comparison (Plan 1c spec §9) therefore has no single answer to follow: the owner decides whether it uses the decade net-migration answer (1970) or treats the timing as open.
 - Open for the owner: (a) the natural-increase residual includes census coverage change, so a coverage-free version could replace it if the births part matters: from the APL files' own adjusted populations and births and deaths for the 1980s–90s, or from state vital statistics for every decade (D-30); (b) the share range has no coverage simulation (D-30); (c) the annual and decade tests define "before" differently (1929–69 vs. 1950s–60s), which is why their answers differ; any follow-up comparing them on the same window would be a new, post-hoc analysis.
+- Plan 2 (RQ0a, city vs. metro) is implemented on branch `plan-2-rq0a` (D-31). Finding: the 1950–70 plateau of old big cities was mostly a city-proper pattern (88% of those that fell behind sat in metros that kept up), concentrated in fixed-boundary cities, and whole metros fell behind only from 1970–90, almost only in the Northeast and Midwest. Still open: same-boundary city populations (option B, tract-based, 1970+) if the boundary result needs a counterfactual; the 1900–1930 county splits (not needed while metro figures start in 1940).
 - Confirm the Rosés-Wolf database URL; verify citations when building `references/references.bib`.
 - Decide what to do with the empty root-level `sources.md`.
 - No deadline or target paper length set yet.

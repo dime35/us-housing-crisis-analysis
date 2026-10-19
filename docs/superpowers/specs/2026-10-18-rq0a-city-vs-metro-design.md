@@ -1,7 +1,7 @@
 # Design: RQ0a, did US cities stall, or did their metros? (Plan 2)
 
 - **Date:** 2026-10-18
-- **Status:** Draft for the owner's review (the design was agreed section by section in conversation on 2026-10-18; §10 lists corrections found while writing it)
+- **Status:** Approved 2026-10-19; implemented (Plan 2, `docs/superpowers/plans/2026-10-19-plan-2-rq0a-city-vs-metro.md`). §10 lists corrections found while writing the spec, §11 changes made while planning and building
 - **Extends:** `2026-10-08-housing-growth-mismatch-design.md` (§2 RQ0a, §3 Tier 0, §5 RQ0a method, §6 notebook `1.0-lr-city-vs-metro`, §10 build step 2)
 - **Builds on:** Plan 1 (`us_metro_longrun`, `geography.py`, the NHGIS source, D-27 drop rather than invent), Plan 1c (three periods cut at 1970 and 1990, preset decision rules, unit resampling), D-29 (design standards)
 
@@ -238,3 +238,18 @@ These differ from what was said in the design conversation:
 - Master spec §2 RQ0a row: years "classes 1950–2020; background 1900–1950"; §3 Tier 0: city-proper sources named; §4: new sources and `us_city_metro` panel; §5 RQ0a: replaced by §4 here; §7: the tests in §7.
 - `Claude/methods/analysis-methods.md` RQ0a section; `geography.md` (main-city crosswalk, annexing rule, source disagreements, the 1900–1930 item stays open); `pipeline.md` (new panel); `Claude/research/sources.md` rows for CESTA, NHGIS AV0, WP27, Gazetteers (and ICPSR 7735 if used).
 - `Claude/methods/decisions.md`: one entry for this design, numbered with the next free number at build time.
+
+## 11. Changes made while planning and building (2026-10-19)
+
+Recorded in D-31; each was checked on the real files.
+1. No schema change: the existing geo level `city` (prefix `place:`) is used, not a new `place` level (§6).
+2. **The 1990 Census Gazetteer is the 1990 land-area source** (§3.1, §3.4): area comes from WP27 for 1950–1980 and Gazetteers for 1990–2020; WP27's 1990 table is a check (identical populations, area within 0.22%). Unknown annexing flags at 20%: 5, 5 and 0 by period, so ICPSR 7735 is not used. **Addition to §4.5:** while planning, annexing flags were computed for the headline cities (unconditioned; 39 annexing / 37 fixed in 1950–70, 20 / 56 in 1970–90, 14 / 67 in 1990–2020). No class, share or rule result was computed before the rules ran.
+3. Place-code changes are applied from a committed table: Louisville 2020 = metro government balance + the old city (a separate inactive place in 2020; 633,045 together), Louisville 1990 and 2000 = the pre-merger city, the 1990 "remainder" codes for Jacksonville and Indianapolis, Macon 2020 = Macon-Bibb County.
+4. A city's 2020 count is used only where CESTA and NHGIS agree in 2010 within 0.5% (drops Honolulu, whose CDP was redefined, and Crystal City TX).
+5. CESTA vs. WP27 (§3.3, §7): 8 headline city-years exceed 0.5%: Mobile 1960, Jacksonville 1970, Portland 1970, Sacramento 1970, Austin 1970, Youngstown 1970, Shreveport 1980, Dayton 1980.
+6. Austin was 73rd in 1950, so it is a headline metro; `rq0a_city_share.png` labels all nine featured US metros (§6 Outputs said otherwise).
+7. Puerto Rico's metros are left out (387 metros). A committed overrides table settles 7 main-city names; 3 metros have no city series.
+8. Connecticut's legacy counties count as central. Hartford, New Haven and Bridgeport resolve through the legacy-county mapping.
+9. Checks per rule (§4.4): rule 1 — absolute yardstick, bars at ⅓ and ⅔, core = all old cities, central counties; rule 2 — absolute yardstick, bars at ⅓ and ⅔, annexing threshold 10% and 40%, central counties; rule 3 — absolute yardstick, bars at ⅓ and ⅔, central counties.
+10. Rule 3 is reported as two rows (F₂ − F₁ and F₃ − F₁); context rows share `rq0a_answers.csv` with an empty answer.
+
