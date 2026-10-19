@@ -1,0 +1,8 @@
+cbsa_code,place_fips,note
+11200,,"Amherst Town-Northampton, MA: Amherst has no CESTA series, so no city series"
+12700,2503690,Barnstable Town: CESTA names it Barnstable
+14260,1608830,Boise City: CESTA names it Boise
+26140,,"Homosassa Springs, FL: a CDP not in CESTA, so no city series"
+30500,,"Lexington Park, MD: a CDP not in CESTA, so no city series"
+35620,3651000,New York: CESTA names it New York City
+46520,1571550,"Urban Honolulu: CESTA names it Honolulu (the pre-2010 CDP, so its 2020 count is not used)"

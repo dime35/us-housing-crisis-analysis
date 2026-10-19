@@ -1,0 +1,101 @@
+rank_1950,place_fips,city_name,population_1950,cbsa_code,main_city,in_cesta
+1,3651000,"New York city, NY",7891957.0,35620,True,True
+2,1714000,"Chicago city, IL",3620962.0,16980,True,True
+3,4260000,"Philadelphia city, PA",2071605.0,37980,True,True
+4,0644000,"Los Angeles city, CA",1970358.0,31080,True,True
+5,2622000,"Detroit city, MI",1849568.0,19820,True,True
+6,2404000,"Baltimore city, MD",949708.0,12580,True,True
+7,3916000,"Cleveland city, OH",914808.0,17410,True,True
+8,2965000,"St. Louis city, MO",856796.0,41180,True,True
+9,1150000,"Washington city, DC",802178.0,47900,True,True
+10,2507000,"Boston city, MA",801444.0,14460,True,True
+11,0667000,"San Francisco city, CA",775357.0,41860,True,True
+12,4261000,"Pittsburgh city, PA",676806.0,38300,True,True
+13,5553000,"Milwaukee city, WI",637392.0,33340,True,True
+14,4835000,"Houston city, TX",596163.0,26420,True,True
+15,3611000,"Buffalo city, NY",580132.0,15380,True,True
+16,2255000,"New Orleans city, LA",570445.0,35380,True,True
+17,2743000,"Minneapolis city, MN",521718.0,33460,True,True
+18,3915000,"Cincinnati city, OH",503998.0,17140,True,True
+19,5363000,"Seattle city, WA",467591.0,42660,True,True
+20,2938000,"Kansas City city, MO",456622.0,28140,True,True
+21,3451000,"Newark city, NJ",438776.0,35620,False,True
+22,4819000,"Dallas city, TX",434462.0,19100,True,True
+23,1836003,"Indianapolis city, IN",427173.0,26900,True,True
+24,0820000,"Denver city, CO",415786.0,19740,True,True
+25,4865000,"San Antonio city, TX",408442.0,41700,True,True
+26,4748000,"Memphis city, TN",396000.0,32820,True,True
+27,0653000,"Oakland city, CA",384575.0,41860,False,True
+28,3918000,"Columbus city, OH",375901.0,18140,True,True
+29,4159000,"Portland city, OR",373628.0,38900,True,True
+30,2148006,"Louisville city, KY",369129.0,31140,True,True
+31,0666000,"San Diego city, CA",334387.0,41740,True,True
+32,3663000,"Rochester city, NY",332488.0,40380,True,True
+33,1304000,"Atlanta city, GA",331314.0,12060,True,True
+34,0107000,"Birmingham city, AL",326037.0,13820,True,True
+35,2758000,"St. Paul city, MN",311349.0,33460,False,True
+36,3977000,"Toledo city, OH",303616.0,45780,True,True
+37,3436000,"Jersey City city, NJ",299017.0,35620,False,True
+38,4827000,"Fort Worth city, TX",278778.0,19100,False,True
+39,3901000,"Akron city, OH",274605.0,10420,True,True
+40,3137000,"Omaha city, NE",251117.0,36540,True,True
+41,0643000,"Long Beach city, CA",250767.0,31080,False,True
+42,1245000,"Miami city, FL",249276.0,33100,True,True
+43,4459000,"Providence city, RI",248674.0,39300,True,True
+44,3921000,"Dayton city, OH",243872.0,19430,True,True
+45,4055000,"Oklahoma City city, OK",243504.0,36420,True,True
+46,5167000,"Richmond city, VA",230310.0,40060,True,True
+47,3673000,"Syracuse city, NY",220583.0,45060,True,True
+48,5157000,"Norfolk city, VA",213513.0,47260,True,True
+49,1235000,"Jacksonville city, FL",204517.0,27260,True,True
+50,2582000,"Worcester city, MA",203486.0,49340,True,True
+51,4075000,"Tulsa city, OK",182740.0,46140,True,True
+52,4967000,"Salt Lake City city, UT",182121.0,41620,True,True
+53,1921000,"Des Moines city, IA",177965.0,19780,True,True
+54,0937000,"Hartford city, CT",177397.0,25540,True,True
+55,2634000,"Grand Rapids city, MI",176515.0,24340,True,True
+56,4752006,"Nashville city, TN",174307.0,34980,True,True
+57,3988000,"Youngstown city, OH",168330.0,49660,True,True
+58,2079000,"Wichita city, KS",168279.0,48620,True,True
+59,0952000,"New Haven city, CT",164443.0,35300,True,True
+60,2629000,"Flint city, MI",163143.0,22420,True,True
+61,2567000,"Springfield city, MA",162399.0,44140,True,True
+62,5367000,"Spokane city, WA",161721.0,44060,True,True
+63,0908000,"Bridgeport city, CT",158709.0,14860,True,True
+64,3684000,"Yonkers city, NY",152798.0,35620,False,True
+65,5370000,"Tacoma city, WA",143673.0,42660,False,True
+66,3457000,"Paterson city, NJ",139336.0,35620,False,True
+67,0664000,"Sacramento city, CA",137572.0,40900,True,True
+68,5103000,"Arlington CDP, VA",135449.0,47900,False,False
+69,3601000,"Albany city, NY",134995.0,10580,True,True
+70,3712000,"Charlotte city, NC",134042.0,16740,True,True
+71,1827000,"Gary city, IN",133911.0,16980,False,True
+72,1825000,"Fort Wayne city, IN",133607.0,23060,True,True
+73,4805000,"Austin city, TX",132459.0,12420,True,True
+74,4714000,"Chattanooga city, TN",131041.0,16860,True,True
+75,4224000,"Erie city, PA",130803.0,21500,True,True
+76,4824000,"El Paso city, TX",130485.0,21340,True,True
+77,2036000,"Kansas City city, KS",129553.0,28140,False,True
+78,0150000,"Mobile city, AL",129009.0,33660,True,True
+79,1822000,"Evansville city, IN",128636.0,21780,True,True
+80,3474000,"Trenton city, NJ",128009.0,45940,True,True
+81,2270000,"Shreveport city, LA",127206.0,43340,True,True
+82,2205000,"Baton Rouge city, LA",125629.0,12940,True,True
+83,4269000,"Scranton city, PA",125536.0,42540,True,True
+84,4740000,"Knoxville city, TN",124769.0,28940,True,True
+85,1271000,"Tampa city, FL",124681.0,45300,True,True
+86,3410000,"Camden city, NJ",124555.0,37980,False,True
+87,2511000,"Cambridge city, MA",120740.0,14460,False,True
+88,1369000,"Savannah city, GA",119638.0,42340,True,True
+89,3912000,"Canton city, OH",116912.0,15940,True,True
+90,1871000,"South Bend city, IN",115911.0,43780,True,True
+91,0606000,"Berkeley city, CA",113805.0,41860,False,True
+92,3421000,"Elizabeth city, NJ",112817.0,35620,False,True
+93,2523000,"Fall River city, MA",111963.0,39300,False,True
+94,1759000,"Peoria city, IL",111856.0,37900,True,True
+95,1077580,"Wilmington city, DE",110356.0,37980,False,True
+96,4263624,"Reading city, PA",109320.0,39740,True,True
+97,2545000,"New Bedford city, MA",109189.0,39300,False,True
+98,4817000,"Corpus Christi city, TX",108287.0,18580,True,True
+99,0455000,"Phoenix city, AZ",106818.0,38060,True,True
+100,4202000,"Allentown city, PA",106756.0,10900,True,True

@@ -1,0 +1,8 @@
+place_fips,year,source_fips,note
+1235000,1990,1235160,Jacksonville city (remainder) in the 1990 Gazetteer
+1836003,1990,1836010,Indianapolis city (remainder) in the 1990 Gazetteer
+2148006,1990,2148000,Louisville city before its 2003 merger with Jefferson County
+2148006,2000,2148000,Louisville city before its 2003 merger with Jefferson County
+2148006,2020,2148006,"Louisville 2020, part 1: the metro government (balance) without the old city"
+2148006,2020,2148000,"Louisville 2020, part 2: the old city, a separate inactive place in 2020; with part 1 it makes up the 2010 balance (land 263.5 + 61.5 sq mi = 2010's 325.2, up to remeasurement)"
+1349000,2020,1349008,Macon-Bibb County: Macon consolidated with Bibb County in 2014 (new code)
