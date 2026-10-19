@@ -50,9 +50,10 @@ format:
 #################################################################################
 
 
-## Download and load every source into data/interim
+## Download and load every source into data/interim (and the geography reference files)
 .PHONY: data
 data:
+	$(PYTHON_INTERPRETER) -c "from us_housing_crisis_analysis import geography; geography.download()"
 	$(PYTHON_INTERPRETER) -m us_housing_crisis_analysis.dataset download
 	$(PYTHON_INTERPRETER) -m us_housing_crisis_analysis.dataset load
 
