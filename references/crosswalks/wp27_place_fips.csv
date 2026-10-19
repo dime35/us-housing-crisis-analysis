@@ -1,0 +1,140 @@
+wp27_name,state,place_fips
+Anchorage city,AK,0203000
+Birmingham city,AL,0107000
+Mobile city,AL,0150000
+Montgomery city,AL,0151000
+Little Rock city,AR,0541000
+Mesa city,AZ,0446000
+Phoenix city,AZ,0455000
+Tucson city,AZ,0477000
+Anaheim city,CA,0602000
+Bakersfield city,CA,0603526
+Berkeley city,CA,0606000
+Fremont city,CA,0626000
+Fresno city,CA,0627000
+Glendale city,CA,0630000
+Huntington Beach city,CA,0636000
+Long Beach city,CA,0643000
+Los Angeles city,CA,0644000
+Oakland city,CA,0653000
+Riverside city,CA,0662000
+Sacramento city,CA,0664000
+San Diego city,CA,0666000
+San Francisco city,CA,0667000
+San Jose city,CA,0668000
+Santa Ana city,CA,0669000
+Stockton city,CA,0675000
+Aurora city,CO,0804000
+Colorado Springs city,CO,0816000
+Denver city,CO,0820000
+Bridgeport city,CT,0908000
+Hartford city,CT,0937000
+New Haven city,CT,0952000
+Washington city,DC,1150000
+Wilmington city,DE,1077580
+Fort Lauderdale city,FL,1224000
+Hialeah city,FL,1230000
+Jacksonville city,FL,1235000
+Miami city,FL,1245000
+St. Petersburg city,FL,1263000
+Tampa city,FL,1271000
+Atlanta city,GA,1304000
+Columbus city,GA,1319000
+Savannah city,GA,1369000
+Honolulu CDP,HI,1571550
+Des Moines city,IA,1921000
+Chicago city,IL,1714000
+Peoria city,IL,1759000
+Rockford city,IL,1765000
+Evansville city,IN,1822000
+Fort Wayne city,IN,1825000
+Gary city,IN,1827000
+Indianapolis city,IN,1836003
+South Bend city,IN,1871000
+Kansas City city,KS,2036000
+Wichita city,KS,2079000
+Lexington-Fayette,KY,2146027
+Louisville city,KY,2148006
+Baton Rouge city,LA,2205000
+Metairie CDP,LA,2250115
+New Orleans city,LA,2255000
+Shreveport city,LA,2270000
+Boston city,MA,2507000
+Cambridge city,MA,2511000
+Fall River city,MA,2523000
+New Bedford city,MA,2545000
+Springfield city,MA,2567000
+Worcester city,MA,2582000
+Baltimore city,MD,2404000
+Detroit city,MI,2622000
+Flint city,MI,2629000
+Grand Rapids city,MI,2634000
+Warren city,MI,2684000
+Minneapolis city,MN,2743000
+St. Paul city,MN,2758000
+Kansas City city,MO,2938000
+St. Louis city,MO,2965000
+Jackson city,MS,2836000
+Charlotte city,NC,3712000
+Greensboro city,NC,3728000
+Raleigh city,NC,3755000
+Lincoln city,NE,3128000
+Omaha city,NE,3137000
+Camden city,NJ,3410000
+Elizabeth city,NJ,3421000
+Jersey City city,NJ,3436000
+Newark city,NJ,3451000
+Paterson city,NJ,3457000
+Trenton city,NJ,3474000
+Albuquerque city,NM,3502000
+Las Vegas city,NV,3240000
+Albany city,NY,3601000
+Buffalo city,NY,3611000
+New York city,NY,3651000
+Rochester city,NY,3663000
+Syracuse city,NY,3673000
+Yonkers city,NY,3684000
+Akron city,OH,3901000
+Canton city,OH,3912000
+Cincinnati city,OH,3915000
+Cleveland city,OH,3916000
+Columbus city,OH,3918000
+Dayton city,OH,3921000
+Toledo city,OH,3977000
+Youngstown city,OH,3988000
+Oklahoma City city,OK,4055000
+Tulsa city,OK,4075000
+Portland city,OR,4159000
+Allentown city,PA,4202000
+Erie city,PA,4224000
+Philadelphia city,PA,4260000
+Pittsburgh city,PA,4261000
+Reading city,PA,4263624
+Scranton city,PA,4269000
+Providence city,RI,4459000
+Chattanooga city,TN,4714000
+Knoxville city,TN,4740000
+Memphis city,TN,4748000
+Nashville city,TN,4752006
+Nashville-Davidson,TN,4752006
+Amarillo city,TX,4803000
+Arlington city,TX,4804000
+Austin city,TX,4805000
+Corpus Christi city,TX,4817000
+Dallas city,TX,4819000
+El Paso city,TX,4824000
+Fort Worth city,TX,4827000
+Garland city,TX,4829000
+Houston city,TX,4835000
+Lubbock city,TX,4845000
+San Antonio city,TX,4865000
+Salt Lake City city,UT,4967000
+Arlington CDP,VA,5103000
+Norfolk city,VA,5157000
+Richmond city,VA,5167000
+Virginia Beach city,VA,5182000
+Seattle city,WA,5363000
+Spokane city,WA,5367000
+Tacoma city,WA,5370000
+Madison city,WI,5548000
+Milwaukee city,WI,5553000

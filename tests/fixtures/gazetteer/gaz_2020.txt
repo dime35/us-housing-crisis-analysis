@@ -1,0 +1,6 @@
+USPS	GEOID	ANSICODE	NAME	LSAD	FUNCSTAT	ALAND	AWATER	ALAND_SQMI	AWATER_SQMI	INTPTLAT	INTPTLONG                                                                                                 
+IN	1836003	02395424	Indianapolis city (balance)	00	F	936640759	16304624	361.639	6.295	39.776664	-86.145935                                                                                              
+KY	2148000	02404963	Louisville city	25	N	159239204	12488303	61.483	4.822	38.224728	-85.740614                                                                                                           
+KY	2148006	01967434	Louisville/Jefferson County metro government (balance)	00	F	682349258	30257523	263.457	11.682	38.165376	-85.647377                                                                  
+MI	2622000	01626181	Detroit city	25	A	359311024	10781269	138.731	4.163	42.383037	-83.102237                                                                                                             
+TX	4835000	02410796	Houston city	25	A	1658742854	80896867	640.444	31.234	29.785743	-95.388806                                                                                                           

@@ -5,7 +5,7 @@ from importlib import import_module
 from types import ModuleType
 
 # Run order for `dataset download` / `dataset load`. Each source task appends its module name.
-SOURCE_NAMES: list[str] = ["nhgis", "census_pep", "bea", "manual", "ipums", "icpsr", "netmig", "cesta"]
+SOURCE_NAMES: list[str] = ["nhgis", "census_pep", "bea", "manual", "ipums", "icpsr", "netmig", "cesta", "wp27", "gazetteer"]
 
 
 def get_source(name: str) -> ModuleType:

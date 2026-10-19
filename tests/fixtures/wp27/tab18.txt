@@ -1,0 +1,17 @@
+Table 18.  Population of the 100 Largest Urban Places:  1950
+
+Source:  U.S. Bureau of the Census
+Internet Release date:  June 15, 1998
+
+--------------------------------------------------------------- 
+      |                          |          |       |  Density
+      |                          |          |   Land| (average
+      |                          |          |   area|  popula-
+      |                          |          |   (sq.| tion per
+ Rank | Place 1/                 |Population| miles)|sq. mile)
+--------------------------------------------------------------- 
+    5   Detroit city, MI.........  1,849,568   139.6    13,249
+   14   Houston city, TX.........    596,163   160.0     3,726
+   26   Memphis city, TN.........    396,000   104.2     3,800
+   62   Spokane city WA..........    161,721    41.5     3,897
+   68   Arlington CDP, VA *......    135,449    24.0     5,644
