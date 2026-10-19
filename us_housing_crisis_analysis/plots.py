@@ -35,3 +35,23 @@ def save_figure(fig, name: str) -> Path:
     path = FIGURES_DIR / f"{name}.png"
     fig.savefig(path, dpi=200, bbox_inches="tight")
     return path
+
+
+def spread_labels(y, min_gap: float) -> list[float]:
+    """Label positions for line ends at heights y: same order, at least min_gap apart, each crowded
+    group spread evenly about the mean of its members; labels clear of the others stay put."""
+    order = sorted(range(len(y)), key=lambda i: y[i])
+    groups = []  # [members in order, center]
+    for i in order:
+        groups.append([[i], float(y[i])])
+        while len(groups) > 1:
+            (a, ca), (b, cb) = groups[-2], groups[-1]
+            if (cb - (len(b) - 1) * min_gap / 2) - (ca + (len(a) - 1) * min_gap / 2) >= min_gap:
+                break
+            members = a + b
+            groups[-2:] = [[members, sum(float(y[j]) for j in members) / len(members)]]
+    out = [0.0] * len(y)
+    for members, center in groups:
+        for k, j in enumerate(members):
+            out[j] = center + (k - (len(members) - 1) / 2) * min_gap
+    return out

@@ -1,0 +1,6 @@
+# LaTeX build files (report.tex and report.pdf are kept)
+*.aux
+*.fdb_latexmk
+*.fls
+*.out
+*.log
