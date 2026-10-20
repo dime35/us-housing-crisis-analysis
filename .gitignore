@@ -192,3 +192,6 @@ cython_debug/
 
 # superpowers plan workspaces (ledgers, briefs)
 .superpowers/
+
+# Claude Code agent worktrees
+.claude/worktrees/
