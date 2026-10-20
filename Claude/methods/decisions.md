@@ -313,6 +313,7 @@ These were made by Claude while drafting the spec and haven't been explicitly co
 - **Decision:** fix the write-ups and make every number traceable; leave the preset rules and their answers unchanged. *Decided by: user, 2026-10-19.*
 - **Implementation calls:** *Decided by: Claude, 2026-10-19.*
   1. RQ0b: per-slope clustered SEs and an Andrews p-value for the single-break search (`annual_breaks.andrews_p_value`); a leave-one-state-out run of the rule (not a preset check, so it can't make an answer "fragile"); the test statistics and decade β's saved to tables. Results in `analysis-methods.md` (Plan 1c, "After the outside review").
+  2. RQ0a: stricter keep-up bars (¾ and the full US rate) and a headline vs. other-metros comparison, as exploratory rows in their own table (`rq0a_exploratory.csv`), so the preset answers and their robust/fragile labels stay as registered. The "Limits" note on the headline set is corrected (selection makes rule 3's rise larger). US growth and the city-share summary are saved to tables.
 
 ## Open items
 - Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27).

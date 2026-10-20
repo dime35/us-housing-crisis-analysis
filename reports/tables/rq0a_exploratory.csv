@@ -1,0 +1,13 @@
+rule,version,estimate,low,high,n,answer,detail
+1,exploratory: bar at 0.75 of US growth,0.6470588235294118,0.5370370370370371,0.75,51,can't tell,skipped draws: 0
+3 (F2−F1),exploratory: bar at 0.75 of US growth,0.32098765432098764,0.2222222222222222,0.41975308641975306,81,"later, by 1970–90","F(1950–1970) = 0.23, F(1970–1990) = 0.56, F(1990–2020) = 0.50"
+3 (F3−F1),exploratory: bar at 0.75 of US growth,0.26249999999999996,0.16049382716049376,0.36250000000000004,80,"later, by 1970–90","F(1950–1970) = 0.23, F(1970–1990) = 0.56, F(1990–2020) = 0.50"
+1,exploratory: bar at 1 of US growth,0.5185185185185185,0.40808767951625097,0.6274965800273598,54,mixed,skipped draws: 0
+3 (F2−F1),exploratory: bar at 1 of US growth,0.24691358024691362,0.14814814814814814,0.33333333333333337,81,"later, by 1970–90","F(1950–1970) = 0.37, F(1970–1990) = 0.62, F(1990–2020) = 0.61"
+3 (F3−F1),exploratory: bar at 1 of US growth,0.2375,0.1265822784810126,0.33333333333333337,80,"later, by 1970–90","F(1950–1970) = 0.37, F(1970–1990) = 0.62, F(1990–2020) = 0.61"
+3,"exploratory: F in 1950–1970, headline",0.08641975308641975,,,81,,"median 1950 metro population 546,401"
+3,"exploratory: F in 1950–1970, other metros",0.18543046357615894,,,302,,"median 1950 metro population 83,962"
+3,"exploratory: F in 1970–1990, headline",0.43209876543209874,,,81,,"median 1950 metro population 546,401"
+3,"exploratory: F in 1970–1990, other metros",0.21122112211221122,,,303,,"median 1950 metro population 83,962"
+3,"exploratory: F in 1990–2020, headline",0.3625,,,80,,"median 1950 metro population 546,401"
+3,"exploratory: F in 1990–2020, other metros",0.25742574257425743,,,303,,"median 1950 metro population 83,962"
