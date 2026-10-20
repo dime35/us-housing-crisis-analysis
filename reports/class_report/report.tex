@@ -130,7 +130,19 @@ g_{i,t} = \alpha_t + \beta_{\text{before}}\, x_{i,t}\,\mathbf{1}[t<1970]
         + \beta_{\text{after}}\, x_{i,t}\,\mathbf{1}[t \ge 1990] + \varepsilon_{i,t},
 \label{eq:test}
 \end{equation}
-where $g_{i,t}$ is growth from year $t$ to $t+1$ and $x_{i,t}$ is log income per person. There are
+where $g_{i,t}$ is growth from year $t$ to $t+1$ and $x_{i,t}$ is log income per person. The
+symbol $\mathbf{1}[\cdot]$ is the \emph{indicator function}: it equals 1 when the condition in
+brackets is true and 0 when it is false,
+\[
+\mathbf{1}[t < 1970] =
+\begin{cases}
+1 & \text{if } t < 1970,\\
+0 & \text{otherwise.}
+\end{cases}
+\]
+In any given year exactly one of the three indicators equals 1, so each year's growth is
+explained by one slope only. For example, in 1955 the equation reduces to
+$g_{i,1955} = \alpha_{1955} + \beta_{\text{before}}\, x_{i,1955} + \varepsilon_{i,1955}$. There are
 4,803 state-years: 51 states (including DC), growth years 1929--2023. The 1970 and 1990 cut points
 come from earlier break-date searches in this project and from the literature (Ganong and Shoag,
 2017).
