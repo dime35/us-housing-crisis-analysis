@@ -308,6 +308,12 @@ These were made by Claude while drafting the spec and haven't been explicitly co
     11. NHGIS places with 4-digit, non-FIPS codes are dropped (they collided with real codes after padding).
 - **Result (2026-10-19):** all three answers robust: mostly suburbanization (S = 0.88, range 0.79–0.96); plateau concentrated in fixed-boundary cities (D = 0.69, 0.54–0.82); metros fell behind later, by 1970–90 (F 0.09 → 0.43 → 0.36), almost only in the Northeast and Midwest.
 
+### D-32 · Fixes from the outside review of the notebooks and class report
+- **Context:** three independent reviewers checked notebooks 1.0 and 1.1 and the class report, then cross-examined each other's findings (2026-10-19). Every reported number reproduced. The problems were in interpretation: data-chosen cut years with a nominal p-value, a "1970" timing answer that depends on DC, "slower after 1990" for a slope not different from zero, behavioural wording against D-29, mixed growth scales, and untraceable numbers.
+- **Decision:** fix the write-ups and make every number traceable; leave the preset rules and their answers unchanged. *Decided by: user, 2026-10-19.*
+- **Implementation calls:** *Decided by: Claude, 2026-10-19.*
+  1. RQ0b: per-slope clustered SEs and an Andrews p-value for the single-break search (`annual_breaks.andrews_p_value`); a leave-one-state-out run of the rule (not a preset check, so it can't make an answer "fragile"); the test statistics and decade β's saved to tables. Results in `analysis-methods.md` (Plan 1c, "After the outside review").
+
 ## Open items
 - Plan 1 (scaffolding and RQ0b) is complete on branch `plan-1-rq0b`, with the whole-branch review fixes in (D-26, D-27).
 - Plan 1b (annual break dating) is complete on branch `plan-1b-annual-breaks` (D-28). Finding: annual data confirm the state break but can't pin down the year (about 1990 with all states, about 1970 without the energy states). Next is Plan 2 (RQ0a, city-proper), which includes the 1900–1930 county splits. RQ0c (global timing) is in design.
