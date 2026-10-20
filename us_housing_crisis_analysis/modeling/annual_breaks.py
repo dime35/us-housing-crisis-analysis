@@ -62,10 +62,21 @@ def rolling_betas(panel: pd.DataFrame, horizon: int, start: int, end: int) -> pd
     return breaks.decade_betas(window_panel(panel, horizon, start, end), period="start")
 
 
-@lru_cache
 def andrews_critical_value(trim: float, level: float = 0.05) -> float:
     """Andrews (1993) critical value for sup-Wald with one restriction: the (1 - level) quantile
-    of sup over pi in [trim, 1 - trim] of (W(pi) - pi W(1))^2 / (pi (1 - pi)), W a Brownian
+    of the simulated null distribution (_andrews_null)."""
+    return float(np.quantile(_andrews_null(trim), 1 - level))
+
+
+def andrews_p_value(stat: float, trim: float) -> float:
+    """Share of the simulated sup-Wald null distribution at or above `stat`: the p-value of a
+    break test that searched over every candidate year."""
+    return float((_andrews_null(trim) >= stat).mean())
+
+
+@lru_cache
+def _andrews_null(trim: float) -> np.ndarray:
+    """sup over pi in [trim, 1 - trim] of (W(pi) - pi W(1))^2 / (pi (1 - pi)), W a Brownian
     motion, simulated on a grid of 10,000 steps with 20,000 draws (fixed seed)."""
     grid, reps, chunk = 10_000, 20_000, 500
     rng = np.random.default_rng(0)
@@ -76,7 +87,7 @@ def andrews_critical_value(trim: float, level: float = 0.05) -> float:
         w = np.cumsum(rng.standard_normal((chunk, grid)), axis=1) / np.sqrt(grid)
         bridge = w[:, inside] - pi[inside] * w[:, [-1]]
         sups.append((bridge**2 / (pi[inside] * (1 - pi[inside]))).max(axis=1))
-    return float(np.quantile(np.concatenate(sups), 1 - level))
+    return np.concatenate(sups)
 
 
 def candidate_positions(n_periods: int, trim: float) -> np.ndarray:
@@ -316,6 +327,9 @@ class ThreePeriod:
     wald_mid_post: float
     n_units: int
     n_obs: int
+    se_pre: float  # clustered standard errors of the three slopes
+    se_mid: float
+    se_post: float
 
 
 def _segments(dp: pd.DataFrame, period: str, cuts) -> np.ndarray:
@@ -360,7 +374,7 @@ def three_period(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: s
 
     (w_pp, p_pp), (w_mpre, p_mpre), (w_mpost, p_mpost) = wald([1, 0, -1]), wald([-1, 1, 0]), wald([0, 1, -1])
     return ThreePeriod(float(b[0]), float(b[1]), float(b[2]), _share(b), p_pp, p_mpre, p_mpost,
-                       w_pp, w_mpre, w_mpost, int(n_units), int(n))
+                       w_pp, w_mpre, w_mpost, int(n_units), int(n), *map(float, np.sqrt(np.diag(cov))))
 
 
 def share_range(dp: pd.DataFrame, cuts=RQ0B_CUTS, period: str = "year", cell: str | None = None,

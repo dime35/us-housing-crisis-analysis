@@ -76,6 +76,12 @@ def test_window_panel_skips_windows_containing_a_flagged_step():
     assert set(w.loc[w.geo_id == "u1", "start"]) == set(range(1990, 2001))
 
 
+def test_andrews_p_value_inverts_the_critical_value():
+    assert ab.andrews_p_value(ab.andrews_critical_value(0.15), 0.15) == pytest.approx(0.05, abs=0.002)
+    assert ab.andrews_p_value(ab.andrews_critical_value(0.15, 0.01), 0.15) == pytest.approx(0.01, abs=0.001)
+    assert ab.andrews_p_value(0.0, 0.15) == 1.0
+
+
 def test_andrews_critical_values_match_the_published_table():
     # Andrews (1993) Table 1, one restriction, 5% level
     assert ab.andrews_critical_value(0.15) == pytest.approx(8.85, abs=0.15)
@@ -264,6 +270,7 @@ def test_three_period_matches_statsmodels_with_cell_dummies():
         X[f"s{s}"] = dp.log_income * (seg == s)
     fit = sm.OLS(dp.growth, X).fit(cov_type="cluster", cov_kwds={"groups": pd.factorize(dp.geo_id)[0]})
     assert [r.beta_pre, r.beta_mid, r.beta_post] == pytest.approx(list(fit.params[["s0", "s1", "s2"]]), rel=1e-10)
+    assert [r.se_pre, r.se_mid, r.se_post] == pytest.approx(list(fit.bse[["s0", "s1", "s2"]]), rel=1e-8)
     for stat, p, constraint in [(r.wald_pre_post, r.p_pre_post, "s0 = s2"),
                                 (r.wald_mid_pre, r.p_mid_pre, "s1 = s0"),
                                 (r.wald_mid_post, r.p_mid_post, "s1 = s2")]:
